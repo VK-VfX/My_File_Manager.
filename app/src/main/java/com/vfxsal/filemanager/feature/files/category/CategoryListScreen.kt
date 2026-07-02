@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
 fun CategoryListScreen(
     categoryName: String,
     onBack: () -> Unit,
+    onEditFile: (String) -> Unit,
     viewModel: CategoryViewModel = viewModel(),
 ) {
     val category = remember(categoryName) {
@@ -79,7 +80,7 @@ fun CategoryListScreen(
                                 selectionMode = false,
                                 selected = false,
                                 onClick = {
-                                    if (!FileOps.tryOpen(context, entry.file)) {
+                                    if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                                         scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                     }
                                 },
@@ -95,6 +96,7 @@ fun CategoryListScreen(
                 state = actionsState,
                 snackbarHostState = snackbarHostState,
                 onChanged = { viewModel.refresh() },
+                onEditFile = onEditFile,
             )
         }
     }

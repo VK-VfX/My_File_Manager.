@@ -10,6 +10,13 @@ import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import java.io.File
 
+private val TEXT_EXTENSIONS = setOf(
+    "txt", "md", "markdown", "json", "xml", "yaml", "yml", "ini", "conf", "cfg", "properties",
+    "csv", "tsv", "log", "gradle", "kts", "kt", "java", "py", "js", "ts", "jsx", "tsx", "html",
+    "htm", "css", "scss", "sh", "bash", "c", "h", "cpp", "hpp", "cs", "rs", "go", "rb", "php",
+    "sql", "toml", "gitignore", "env", "bat", "ps1", "lua", "pl", "r", "swift", "dart", "vue",
+)
+
 /**
  * All filesystem side effects for the Files feature live here so view models stay
  * thin. Every function is a plain blocking call - callers are expected to invoke
@@ -87,6 +94,12 @@ object FileOps {
     fun mimeType(file: File): String? =
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
 
+    fun isTextEditable(entry: FileEntry): Boolean {
+        if (entry.isDirectory) return false
+        if (entry.extension.lowercase() in TEXT_EXTENSIONS) return true
+        return mimeType(entry.file)?.startsWith("text/") == true
+    }
+
     fun contentUri(context: Context, file: File): Uri =
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
@@ -122,6 +135,19 @@ object FileOps {
         true
     } catch (e: ActivityNotFoundException) {
         false
+    }
+
+    /**
+     * Text-editable files open in the built-in editor instead of handing off to another app,
+     * since viewing/editing files in place is the point of this app; everything else still
+     * falls back to [tryOpen]. Returns false only when there's truly no app to open with.
+     */
+    fun openOrEdit(context: Context, entry: FileEntry, onEdit: (String) -> Unit): Boolean {
+        if (isTextEditable(entry)) {
+            onEdit(entry.path)
+            return true
+        }
+        return tryOpen(context, entry.file)
     }
 
     fun tryShare(context: Context, files: List<File>): Boolean {

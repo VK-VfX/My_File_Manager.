@@ -15,16 +15,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.vfxsal.filemanager.feature.clean.cleanNavGraph
-import com.vfxsal.filemanager.feature.cloud.cloudNavGraph
 import com.vfxsal.filemanager.feature.files.filesNavGraph
 import com.vfxsal.filemanager.feature.music.musicNavGraph
 import com.vfxsal.filemanager.feature.video.videoNavGraph
+import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
 
 /**
  * Hosts every feature's nested nav graph and draws the bottom navigation bar.
  * The bar is only shown while the current destination is one of the five
  * top-level graph routes; drilling into a detail screen (file details, video
- * player, now playing, drive browser, ...) hides it automatically because
+ * player, now playing, wallpaper preview, ...) hides it automatically because
  * those routes live under a different route string within each feature graph.
  */
 @Composable
@@ -73,7 +73,7 @@ fun AppRoot() {
             cleanNavGraph(navController)
             videoNavGraph(navController)
             musicNavGraph(navController)
-            cloudNavGraph(navController)
+            wallpapersNavGraph(navController)
         }
     }
 }

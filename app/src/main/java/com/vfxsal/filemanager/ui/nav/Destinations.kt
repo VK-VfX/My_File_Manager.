@@ -1,16 +1,16 @@
 package com.vfxsal.filemanager.ui.nav
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.outlined.CloudQueue
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.vfxsal.filemanager.R
 
@@ -49,10 +49,10 @@ enum class TopLevelDestination(
         selectedIcon = Icons.Filled.LibraryMusic,
         unselectedIcon = Icons.Outlined.LibraryMusic,
     ),
-    CLOUD(
-        graphRoute = "cloud",
-        labelRes = R.string.nav_cloud,
-        selectedIcon = Icons.Filled.CloudQueue,
-        unselectedIcon = Icons.Outlined.CloudQueue,
+    WALLPAPERS(
+        graphRoute = "wallpapers",
+        labelRes = R.string.nav_wallpapers,
+        selectedIcon = Icons.Filled.Wallpaper,
+        unselectedIcon = Icons.Outlined.Wallpaper,
     ),
 }

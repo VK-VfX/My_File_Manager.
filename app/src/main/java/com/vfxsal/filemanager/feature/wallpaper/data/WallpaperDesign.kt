@@ -1,0 +1,15 @@
+package com.vfxsal.filemanager.feature.wallpaper.data
+
+import androidx.compose.ui.graphics.Color
+
+enum class WallpaperStyle { ORB_GLOW, DUAL_ORB, LINE_WAVE, RING, PARTICLES, AURORA_EDGE, TRIANGLE_OUTLINE }
+
+/** A procedural wallpaper recipe - [WallpaperRenderer] turns this into a true-black bitmap at any resolution. */
+data class WallpaperDesign(
+    val id: String,
+    val name: String,
+    val style: WallpaperStyle,
+    val primary: Color,
+    val secondary: Color = primary,
+    val seed: Long,
+)

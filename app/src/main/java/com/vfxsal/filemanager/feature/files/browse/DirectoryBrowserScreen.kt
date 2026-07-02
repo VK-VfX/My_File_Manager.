@@ -57,6 +57,7 @@ fun DirectoryBrowserScreen(
     rootPath: String,
     onNavigate: (String) -> Unit,
     onBack: () -> Unit,
+    onEditFile: (String) -> Unit,
     clipboardViewModel: ClipboardViewModel,
     viewModel: DirectoryBrowserViewModel = viewModel(),
 ) {
@@ -180,7 +181,7 @@ fun DirectoryBrowserScreen(
                                 when {
                                     uiState.selectionMode -> viewModel.toggleSelection(entry.path)
                                     entry.isDirectory -> onNavigate(entry.path)
-                                    else -> if (!FileOps.tryOpen(context, entry.file)) {
+                                    else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                                         scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                     }
                                 }
@@ -196,6 +197,7 @@ fun DirectoryBrowserScreen(
                 state = actionsState,
                 snackbarHostState = snackbarHostState,
                 onChanged = { viewModel.refresh() },
+                onEditFile = onEditFile,
             )
         }
     }

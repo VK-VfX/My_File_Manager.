@@ -65,6 +65,7 @@ fun FileActionsHost(
     state: FileActionsState,
     snackbarHostState: SnackbarHostState,
     onChanged: () -> Unit,
+    onEditFile: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,7 +76,7 @@ fun FileActionsHost(
             onDismiss = { state.dismissDetails() },
             onOpen = {
                 state.dismissDetails()
-                if (!FileOps.tryOpen(context, entry.file)) {
+                if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                     scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                 }
             },

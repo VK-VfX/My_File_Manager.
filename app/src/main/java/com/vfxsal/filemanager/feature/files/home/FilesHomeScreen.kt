@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 fun FilesHomeScreen(
     onOpenCategory: (FileCategory) -> Unit,
     onOpenDirectory: (String) -> Unit,
+    onEditFile: (String) -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,7 +100,7 @@ fun FilesHomeScreen(
                                 RecentFilesRow(
                                     files = uiState.recentFiles,
                                     onFileClick = { entry ->
-                                        if (!FileOps.tryOpen(context, entry.file)) {
+                                        if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                                             scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                         }
                                     },
@@ -115,6 +116,7 @@ fun FilesHomeScreen(
                 state = actionsState,
                 snackbarHostState = snackbarHostState,
                 onChanged = { viewModel.refresh() },
+                onEditFile = onEditFile,
             )
         }
     }
