@@ -44,7 +44,7 @@ class JunkFilesViewModel(application: Application) : AndroidViewModel(applicatio
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { JunkUiState(isScanning = true) }
             try {
-                val groups = JunkScanner.scan(getApplication()) { scanned ->
+                val groups = JunkScanner.scan(getApplication<Application>()) { scanned ->
                     _uiState.update { it.copy(scannedCount = scanned) }
                 }
                 val allSelected = groups.flatMap { it.items }.map { it.path }.toSet()

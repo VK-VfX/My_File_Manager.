@@ -37,7 +37,6 @@ fun Track.toMediaItem(): MediaItem {
         .setArtist(artist)
         .setAlbumTitle(album)
         .setArtworkUri(albumArtUri)
-        .setIsPlayable(true)
         .build()
     return MediaItem.Builder()
         .setMediaId(id.toString())
