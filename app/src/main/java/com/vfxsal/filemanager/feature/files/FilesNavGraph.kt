@@ -52,7 +52,7 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
     ) { backStackEntry ->
         val encodedPath = backStackEntry.arguments?.getString("encodedPath").orEmpty()
         val path = decodePath(encodedPath)
-        val filesGraphEntry = remember(navController) { navController.getBackStackEntry(FILES_GRAPH_ROUTE) }
+        val filesGraphEntry = remember(backStackEntry) { navController.getBackStackEntry(FILES_GRAPH_ROUTE) }
         val clipboardViewModel: ClipboardViewModel = viewModel(filesGraphEntry)
         FilesPermissionGate {
             DirectoryBrowserScreen(

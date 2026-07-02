@@ -10,9 +10,6 @@ import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import java.io.File
 
-/** Must match the authority declared for the FileProvider in AndroidManifest.xml. */
-const val FILE_PROVIDER_AUTHORITY = "com.vfxsal.filemanager.fileprovider"
-
 /**
  * All filesystem side effects for the Files feature live here so view models stay
  * thin. Every function is a plain blocking call - callers are expected to invoke
@@ -91,7 +88,7 @@ object FileOps {
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase())
 
     fun contentUri(context: Context, file: File): Uri =
-        FileProvider.getUriForFile(context, FILE_PROVIDER_AUTHORITY, file)
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
     fun viewIntent(context: Context, file: File): Intent {
         val uri = contentUri(context, file)

@@ -1,9 +1,9 @@
 package com.vfxsal.filemanager.feature.music
 
-import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.AndroidViewModel
@@ -103,11 +103,11 @@ fun rememberMusicViewModel(): MusicViewModel {
     return viewModel(viewModelStoreOwner = activity)
 }
 
-private fun Context.findActivity(): Activity {
+private fun Context.findActivity(): ComponentActivity {
     var context = this
     while (context is ContextWrapper) {
-        if (context is Activity) return context
+        if (context is ComponentActivity) return context
         context = context.baseContext
     }
-    throw IllegalStateException("Expected an Activity context")
+    throw IllegalStateException("Expected a ComponentActivity context")
 }
