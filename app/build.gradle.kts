@@ -12,11 +12,27 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "2.0.0"
+        versionCode = 3
+        versionName = "2.1.0"
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        // A fixed, committed debug keystore (not a secret - debug builds are never meant to
+        // be signed with anything sensitive). Without this, Android Gradle Plugin generates a
+        // fresh random ~/.android/debug.keystore on any machine that doesn't already have one -
+        // including every fresh GitHub Actions runner - so each CI build was signed with a
+        // different key and Android refused to install new APKs over the old one without an
+        // uninstall first. Pinning the same keystore here makes every build's signature match,
+        // so new debug APKs install as a seamless update.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -32,6 +48,7 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

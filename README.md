@@ -35,6 +35,19 @@ Google's Maven repository, so **it has not been compiled here** — do a build
 in Android Studio first to catch any dependency-version or API-surface issues
 before relying on it.
 
+## Seamless updates / debug signing
+
+`debug.keystore` at the project root is a **fixed, committed debug keystore**
+(not a secret — debug builds are never signed with anything sensitive). The
+`debug` build type in `app/build.gradle.kts` is pinned to it. This matters
+because Android Gradle Plugin auto-generates a random `~/.android/debug.keystore`
+on any machine that doesn't already have one — including a fresh CI runner —
+so without pinning, every CI-built APK would be signed with a different key
+and Android would refuse to install an update over the previous install
+(forcing an uninstall each time). Do not delete or regenerate this file; if
+it's ever lost, every future debug build will again require a one-time
+uninstall before it can be reinstalled.
+
 ## Play Store note
 
 The Files/Clean features request `MANAGE_EXTERNAL_STORAGE` for full
