@@ -1,4 +1,4 @@
-# Nimbus Files
+# WhatFiles?
 
 A Material 3 Android file manager: browse, view and edit files, analyze and
 clean up storage, play videos and music, and set AMOLED wallpapers. Fully

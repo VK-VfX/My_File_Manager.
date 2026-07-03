@@ -41,10 +41,10 @@ fun VideoPermissionRationale(
         )
         Text(
             text = if (shouldShowRationale) {
-                "Nimbus Files needs permission to read your device's video library so it can " +
+                "WhatFiles? needs permission to read your device's video library so it can " +
                     "show your video folders and let you play them here."
             } else {
-                "Grant media access so Nimbus Files can find and play the videos stored on your device."
+                "Grant media access so WhatFiles? can find and play the videos stored on your device."
             },
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,

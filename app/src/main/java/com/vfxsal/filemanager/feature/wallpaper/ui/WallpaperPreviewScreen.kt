@@ -81,7 +81,7 @@ fun WallpaperPreviewScreen(
                     WallpaperTarget.LOCK -> "Wallpaper set for Lock screen"
                     WallpaperTarget.BOTH -> "Wallpaper set for Home and Lock screens"
                 }
-                WallpaperEvent.Saved -> "Saved to Pictures/Nimbus Wallpapers"
+                WallpaperEvent.Saved -> "Saved to Pictures/WhatFiles Wallpapers"
                 is WallpaperEvent.Error -> event.message
             }
             scope.launch { snackbarHostState.showSnackbar(message) }

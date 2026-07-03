@@ -235,7 +235,7 @@ private fun PermissionRequiredContent(onGrantClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Nimbus Files needs permission to read your music library.",
+            text = "WhatFiles? needs permission to read your music library.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
         )

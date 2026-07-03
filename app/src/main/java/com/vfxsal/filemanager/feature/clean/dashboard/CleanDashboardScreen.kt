@@ -196,7 +196,7 @@ private fun StoragePermissionRequired(onGrantClick: () -> Unit, modifier: Modifi
         Text("Storage access needed", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Nimbus Files needs full storage access to scan for junk, large, and duplicate files.",
+            text = "WhatFiles? needs full storage access to scan for junk, large, and duplicate files.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )

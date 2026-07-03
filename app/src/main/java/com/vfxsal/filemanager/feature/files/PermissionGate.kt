@@ -78,7 +78,7 @@ private fun PermissionRationaleScreen(onGrantClick: () -> Unit) {
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = "Nimbus Files needs access to all files on this device to browse, organize, " +
+            text = "WhatFiles? needs access to all files on this device to browse, organize, " +
                 "copy, move and clean up your folders. Grant \"Allow access to manage all files\" " +
                 "on the next screen to continue.",
             style = MaterialTheme.typography.bodyMedium,
