@@ -67,6 +67,16 @@ class VideoRepository(private val context: Context) {
         return videos
     }
 
+    /**
+     * Deletes both the underlying file and its MediaStore index entry in one call. Relies on
+     * the app's existing MANAGE_EXTERNAL_STORAGE grant (already required for the Files/Clean
+     * features) to avoid the per-item RecoverableSecurityException consent dialog that a
+     * scoped-storage app without broad access would otherwise hit here.
+     */
+    fun deleteVideo(video: VideoItem): Boolean {
+        return runCatching { context.contentResolver.delete(video.uri, null, null) > 0 }.getOrDefault(false)
+    }
+
     companion object {
         const val UNKNOWN_BUCKET = "Other"
     }

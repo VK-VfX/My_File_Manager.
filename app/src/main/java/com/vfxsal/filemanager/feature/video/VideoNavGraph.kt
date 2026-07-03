@@ -3,6 +3,7 @@ package com.vfxsal.filemanager.feature.video
 import android.Manifest
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -15,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
@@ -43,6 +45,7 @@ private const val ROUTE_PLAYER = "video/player/{encodedUri}?title={title}&folder
 fun NavGraphBuilder.videoNavGraph(navController: NavHostController) {
     composable(VIDEO_GRAPH_ROUTE) { backStackEntry ->
         val viewModel: VideoGalleryViewModel = viewModel(backStackEntry)
+        val context = LocalContext.current
 
         VideoPermissionGate {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,6 +63,11 @@ fun NavGraphBuilder.videoNavGraph(navController: NavHostController) {
                     viewModel.setQueue(VideoGalleryViewModel.ALL_VIDEOS_QUEUE_KEY, uiState.allVideos)
                     navController.navigate(playerRoute(video, VideoGalleryViewModel.ALL_VIDEOS_QUEUE_KEY))
                 },
+                onDeleteVideo = { video ->
+                    viewModel.deleteVideo(video) { success ->
+                        if (!success) Toast.makeText(context, "Could not delete video", Toast.LENGTH_SHORT).show()
+                    }
+                },
             )
         }
     }
@@ -73,6 +81,7 @@ fun NavGraphBuilder.videoNavGraph(navController: NavHostController) {
         val viewModel: VideoGalleryViewModel = viewModel(parentEntry)
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val folder = uiState.folders.firstOrNull { it.name == bucketName }
+        val context = LocalContext.current
 
         // Guards against landing here directly after process death, before the gallery screen's
         // own load has ever run for this ViewModel instance.
@@ -85,6 +94,11 @@ fun NavGraphBuilder.videoNavGraph(navController: NavHostController) {
             onVideoClick = { video ->
                 viewModel.setQueue(bucketName, folder?.videos.orEmpty())
                 navController.navigate(playerRoute(video, bucketName))
+            },
+            onDeleteVideo = { video ->
+                viewModel.deleteVideo(video) { success ->
+                    if (!success) Toast.makeText(context, "Could not delete video", Toast.LENGTH_SHORT).show()
+                }
             },
         )
     }

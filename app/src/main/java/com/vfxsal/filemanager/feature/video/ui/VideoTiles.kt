@@ -1,7 +1,9 @@
 package com.vfxsal.filemanager.feature.video.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -28,14 +30,16 @@ import com.vfxsal.filemanager.feature.video.data.VideoFolder
 import com.vfxsal.filemanager.feature.video.data.VideoItem
 import com.vfxsal.filemanager.util.FormatUtils
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VideoGridTile(
     video: VideoItem,
     imageLoader: ImageLoader,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.clickable(onClick = onClick)) {
+    Column(modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

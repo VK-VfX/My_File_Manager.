@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class VideoGalleryUiState(
     val isLoading: Boolean = false,
@@ -55,6 +56,25 @@ class VideoGalleryViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun queueFor(key: String): List<VideoItem> = folderQueues[key].orEmpty()
+
+    /** [folderQueues] is a plain (non-thread-safe) map only ever touched from the main thread
+     *  elsewhere, so its update here is kept on Dispatchers.Main even though the delete itself
+     *  runs on IO. */
+    fun deleteVideo(video: VideoItem, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) { repository.deleteVideo(video) }
+            if (success) {
+                val updatedVideos = _uiState.value.allVideos.filterNot { it.id == video.id }
+                val updatedFolders = updatedVideos
+                    .groupBy { it.bucketName }
+                    .map { (name, items) -> VideoFolder(name, items) }
+                    .sortedBy { it.name.lowercase() }
+                _uiState.update { it.copy(allVideos = updatedVideos, folders = updatedFolders) }
+                folderQueues.replaceAll { _, queue -> queue.filterNot { it.id == video.id } }
+            }
+            onResult(success)
+        }
+    }
 
     companion object {
         const val ALL_VIDEOS_QUEUE_KEY = "__all_videos__"
