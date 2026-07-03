@@ -1,5 +1,6 @@
 package com.vfxsal.filemanager.feature.files.category
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -63,30 +64,38 @@ fun CategoryListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                uiState.entries.isEmpty() -> EmptyState(message = "No ${categoryLabel(category).lowercase()} found")
-                else -> Column {
-                    Text(
-                        text = "${uiState.entries.size} items · ${FormatUtils.formatFileSize(uiState.entries.sumOf { it.sizeBytes })}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(uiState.entries, key = { it.path }) { entry ->
-                            FileListItem(
-                                entry = entry,
-                                selectionMode = false,
-                                selected = false,
-                                onClick = {
-                                    if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-                                        scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
-                                    }
-                                },
-                                onLongClick = { actionsState.showDetails(entry) },
-                                onInfoClick = { actionsState.showDetails(entry) },
-                            )
+            val categoryContentState = when {
+                uiState.isLoading -> "loading"
+                uiState.entries.isEmpty() -> "empty"
+                else -> "list"
+            }
+            Crossfade(targetState = categoryContentState, label = "categoryListContent") { state ->
+                when (state) {
+                    "loading" -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    "empty" -> EmptyState(message = "No ${categoryLabel(category).lowercase()} found")
+                    else -> Column {
+                        Text(
+                            text = "${uiState.entries.size} items · ${FormatUtils.formatFileSize(uiState.entries.sumOf { it.sizeBytes })}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(uiState.entries, key = { it.path }) { entry ->
+                                FileListItem(
+                                    entry = entry,
+                                    selectionMode = false,
+                                    selected = false,
+                                    onClick = {
+                                        if (!FileOps.openOrEdit(context, entry, onEditFile)) {
+                                            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                        }
+                                    },
+                                    onLongClick = { actionsState.showDetails(entry) },
+                                    onInfoClick = { actionsState.showDetails(entry) },
+                                    modifier = Modifier.animateItem(),
+                                )
+                            }
                         }
                     }
                 }

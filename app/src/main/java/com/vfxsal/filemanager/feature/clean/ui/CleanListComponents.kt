@@ -36,9 +36,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.compose.AsyncImage
 import com.vfxsal.filemanager.util.FormatUtils
 
 @Composable
@@ -102,6 +105,11 @@ fun DeleteConfirmationDialog(
     )
 }
 
+/**
+ * When [previewModel] and [previewImageLoader] are both supplied (i.e. the item is an image
+ * or video), the row shows an actual thumbnail instead of a generic category icon, so the
+ * user can see exactly which photo/video is about to be deleted rather than just a filename.
+ */
 @Composable
 fun SelectableFileRow(
     title: String,
@@ -112,6 +120,8 @@ fun SelectableFileRow(
     checked: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    previewModel: Any? = null,
+    previewImageLoader: ImageLoader? = null,
 ) {
     Row(
         modifier = modifier
@@ -121,14 +131,27 @@ fun SelectableFileRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Checkbox(checked = checked, onCheckedChange = { onToggle() })
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconTint.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+        if (previewModel != null && previewImageLoader != null) {
+            AsyncImage(
+                model = previewModel,
+                imageLoader = previewImageLoader,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconTint.copy(alpha = 0.15f)),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconTint.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

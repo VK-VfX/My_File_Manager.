@@ -1,9 +1,17 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="@color/ic_launcher_background"
-        android:pathData="M0,0h108v108h-108z" />
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive icon background for the pitch-black AMOLED theme.
+  A soft periwinkle/indigo radial glow (brand accent) fading into
+  true black, so the icon reads as premium/dark rather than flat-color.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="72dp"
+        android:centerX="0.5"
+        android:centerY="0.42"
+        android:startColor="#3B5FE0"
+        android:centerColor="#120F2E"
+        android:endColor="#000000" />
+</shape>

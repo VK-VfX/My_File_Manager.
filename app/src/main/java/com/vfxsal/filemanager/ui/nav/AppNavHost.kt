@@ -1,5 +1,16 @@
 package com.vfxsal.filemanager.ui.nav
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -10,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -19,6 +31,30 @@ import com.vfxsal.filemanager.feature.files.filesNavGraph
 import com.vfxsal.filemanager.feature.music.musicNavGraph
 import com.vfxsal.filemanager.feature.video.videoNavGraph
 import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
+
+/**
+ * A single shared fade+subtle-slide transition applied to every destination in the app
+ * (set once here at the NavHost level rather than per-screen) so both bottom-nav tab
+ * switches and in-feature drill-downs get a consistent "buttery" feel without every
+ * feature's nav graph needing its own transition boilerplate.
+ */
+private val AppEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(220, delayMillis = 40, easing = LinearOutSlowInEasing)) +
+        slideInHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { fullWidth -> fullWidth / 10 }
+}
+
+private val AppExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing))
+}
+
+private val AppPopEnterTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+    fadeIn(animationSpec = tween(220, delayMillis = 40, easing = LinearOutSlowInEasing))
+}
+
+private val AppPopExitTransition: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+    fadeOut(animationSpec = tween(120, easing = FastOutLinearInEasing)) +
+        slideOutHorizontally(animationSpec = tween(300, easing = FastOutSlowInEasing)) { fullWidth -> fullWidth / 10 }
+}
 
 /**
  * Hosts every feature's nested nav graph and draws the bottom navigation bar.
@@ -68,6 +104,10 @@ fun AppRoot() {
             navController = navController,
             startDestination = TopLevelDestination.FILES.graphRoute,
             modifier = Modifier.padding(innerPadding),
+            enterTransition = AppEnterTransition,
+            exitTransition = AppExitTransition,
+            popEnterTransition = AppPopEnterTransition,
+            popExitTransition = AppPopExitTransition,
         ) {
             filesNavGraph(navController)
             cleanNavGraph(navController)

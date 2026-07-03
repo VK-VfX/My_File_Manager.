@@ -1,5 +1,12 @@
 package com.vfxsal.filemanager.feature.music.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -166,11 +173,20 @@ fun NowPlayingScreen(
                     )
                 }
                 FilledIconButton(onClick = viewModel::togglePlayPause, modifier = Modifier.size(72.dp)) {
-                    Icon(
-                        imageVector = if (playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (playback.isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(36.dp),
-                    )
+                    AnimatedContent(
+                        targetState = playback.isPlaying,
+                        transitionSpec = {
+                            (fadeIn(tween(150)) + scaleIn(initialScale = 0.7f, animationSpec = tween(150))) togetherWith
+                                (fadeOut(tween(100)) + scaleOut(targetScale = 0.7f, animationSpec = tween(100)))
+                        },
+                        label = "nowPlayingPlayPauseIcon",
+                    ) { isPlaying ->
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            modifier = Modifier.size(36.dp),
+                        )
+                    }
                 }
                 IconButton(onClick = viewModel::skipToNext) {
                     Icon(

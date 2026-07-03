@@ -2,7 +2,11 @@ package com.vfxsal.filemanager.feature.wallpaper.data
 
 import androidx.compose.ui.graphics.Color
 
-enum class WallpaperStyle { ORB_GLOW, DUAL_ORB, LINE_WAVE, RING, PARTICLES, AURORA_EDGE, TRIANGLE_OUTLINE }
+enum class WallpaperStyle {
+    ORB_GLOW, DUAL_ORB, LINE_WAVE, RING, PARTICLES, AURORA_EDGE, TRIANGLE_OUTLINE,
+    CONSTELLATION, HEXAGON_RINGS, SPIRAL, RIPPLE_RINGS, SPLIT_GRADIENT,
+    ORBIT_RINGS, MOUNTAIN_SKYLINE, CROSSHAIR_BURST,
+}
 
 /** A procedural wallpaper recipe - [WallpaperRenderer] turns this into a true-black bitmap at any resolution. */
 data class WallpaperDesign(

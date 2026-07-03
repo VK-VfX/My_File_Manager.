@@ -1,9 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive icon foreground: a file/document glyph (folded top-right
+  corner) with a bold "?" mark on it, combining the file-manager
+  identity with the literal "?" from "WhatFiles?". All content is kept
+  inside the 66dp safe-zone circle centered at (54,54) in the 108x108
+  viewport (max radius from center is under 30dp, well inside the
+  33dp safe-zone radius).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Document body (light periwinkle, pops on the near-black background) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M30,34 h18 l8,10 h22 a4,4 0 0 1 4,4 v26 a4,4 0 0 1 -4,4 H30 a4,4 0 0 1 -4,-4 V38 a4,4 0 0 1 4,-4 Z" />
+        android:fillColor="#B9C3FF"
+        android:pathData="M38,29 L62,29 L70,37 L70,79 L38,79 Z" />
+
+    <!-- Folded top-right corner (slightly darker for a subtle fold shadow) -->
+    <path
+        android:fillColor="#8B98D9"
+        android:pathData="M62,29 L70,37 L62,37 Z" />
+
+    <!-- Question-mark hook (deep indigo accent) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#3B5FE0"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M46,44 C46,36 62,36 62,45 C62,52 55,51 55,59" />
+
+    <!-- Question-mark dot -->
+    <path
+        android:fillColor="#3B5FE0"
+        android:pathData="M54,70 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
 </vector>

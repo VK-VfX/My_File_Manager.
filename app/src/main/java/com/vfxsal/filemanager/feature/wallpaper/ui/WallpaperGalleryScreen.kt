@@ -1,5 +1,11 @@
 package com.vfxsal.filemanager.feature.wallpaper.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,7 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,18 +54,31 @@ fun WallpaperGalleryScreen(
         topBar = { TopAppBar(title = { Text("Wallpapers") }) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(uiState.thumbnails, key = { it.design.id }) { thumbnail ->
-                        WallpaperTile(thumbnail = thumbnail, onClick = { onOpenDesign(thumbnail.design.id) })
+            Crossfade(targetState = uiState.isLoading, label = "wallpaperGalleryContent") { isLoading ->
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(uiState.thumbnails, key = { _, thumbnail -> thumbnail.design.id }) { index, thumbnail ->
+                            val visibleState = remember(thumbnail.design.id) {
+                                MutableTransitionState(false).apply { targetState = true }
+                            }
+                            val staggerDelay = minOf(index, 20) * 30
+                            AnimatedVisibility(
+                                visibleState = visibleState,
+                                modifier = Modifier.animateItem(),
+                                enter = fadeIn(tween(durationMillis = 300, delayMillis = staggerDelay)) +
+                                    scaleIn(initialScale = 0.9f, animationSpec = tween(durationMillis = 300, delayMillis = staggerDelay)),
+                            ) {
+                                WallpaperTile(thumbnail = thumbnail, onClick = { onOpenDesign(thumbnail.design.id) })
+                            }
+                        }
                     }
                 }
             }

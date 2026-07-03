@@ -2,6 +2,14 @@ package com.vfxsal.filemanager.feature.music.ui
 
 import android.Manifest
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,7 +94,11 @@ fun MusicLibraryScreen(
     Scaffold(
         topBar = { TopAppBar(title = { Text("Music") }) },
         bottomBar = {
-            if (playback.mediaItem != null) {
+            AnimatedVisibility(
+                visible = playback.mediaItem != null,
+                enter = slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(220)),
+                exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(180)),
+            ) {
                 MiniPlayerBar(
                     playback = playback,
                     onTogglePlayPause = viewModel::togglePlayPause,
@@ -96,39 +108,47 @@ fun MusicLibraryScreen(
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            when {
-                !permissionState.status.isGranted -> PermissionRequiredContent(
-                    onGrantClick = { permissionState.launchPermissionRequest() },
-                )
-                library.isLoading && !library.hasLoadedOnce -> LoadingContent()
-                library.tracks.isEmpty() -> EmptyLibraryContent()
-                else -> Column(modifier = Modifier.fillMaxSize()) {
-                    TabRow(selectedTabIndex = selectedTab) {
-                        MusicTab.entries.forEachIndexed { index, tab ->
-                            Tab(
-                                selected = selectedTab == index,
-                                onClick = { selectedTab = index },
-                                text = { Text(tab.label) },
+            val libraryContentState = when {
+                !permissionState.status.isGranted -> "permission"
+                library.isLoading && !library.hasLoadedOnce -> "loading"
+                library.tracks.isEmpty() -> "empty"
+                else -> "content"
+            }
+            Crossfade(targetState = libraryContentState, label = "musicLibraryContent") { state ->
+                when (state) {
+                    "permission" -> PermissionRequiredContent(
+                        onGrantClick = { permissionState.launchPermissionRequest() },
+                    )
+                    "loading" -> LoadingContent()
+                    "empty" -> EmptyLibraryContent()
+                    else -> Column(modifier = Modifier.fillMaxSize()) {
+                        TabRow(selectedTabIndex = selectedTab) {
+                            MusicTab.entries.forEachIndexed { index, tab ->
+                                Tab(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    text = { Text(tab.label) },
+                                )
+                            }
+                        }
+                        when (MusicTab.entries[selectedTab]) {
+                            MusicTab.SONGS -> SongsTab(
+                                tracks = library.tracks,
+                                currentMediaId = playback.mediaItem?.mediaId,
+                                onTrackClick = { track ->
+                                    requestNotificationPermission()
+                                    viewModel.playQueue(library.tracks, track)
+                                },
+                            )
+                            MusicTab.ALBUMS -> AlbumsTab(
+                                albums = library.albums,
+                                onAlbumClick = { onNavigateToAlbum(it.albumId) },
+                            )
+                            MusicTab.ARTISTS -> ArtistsTab(
+                                artists = library.artists,
+                                onArtistClick = { onNavigateToArtist(it.name) },
                             )
                         }
-                    }
-                    when (MusicTab.entries[selectedTab]) {
-                        MusicTab.SONGS -> SongsTab(
-                            tracks = library.tracks,
-                            currentMediaId = playback.mediaItem?.mediaId,
-                            onTrackClick = { track ->
-                                requestNotificationPermission()
-                                viewModel.playQueue(library.tracks, track)
-                            },
-                        )
-                        MusicTab.ALBUMS -> AlbumsTab(
-                            albums = library.albums,
-                            onAlbumClick = { onNavigateToAlbum(it.albumId) },
-                        )
-                        MusicTab.ARTISTS -> ArtistsTab(
-                            artists = library.artists,
-                            onArtistClick = { onNavigateToArtist(it.name) },
-                        )
                     }
                 }
             }
@@ -148,6 +168,7 @@ private fun SongsTab(
                 track = track,
                 isActive = track.id.toString() == currentMediaId,
                 onClick = { onTrackClick(track) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -163,17 +184,17 @@ private fun AlbumsTab(albums: List<AlbumSummary>, onAlbumClick: (AlbumSummary) -
         modifier = Modifier.fillMaxSize(),
     ) {
         items(albums, key = { it.albumId }) { album ->
-            AlbumCard(album = album, onClick = { onAlbumClick(album) })
+            AlbumCard(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.animateItem())
         }
     }
 }
 
 @Composable
-private fun AlbumCard(album: AlbumSummary, onClick: () -> Unit) {
+private fun AlbumCard(album: AlbumSummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
         color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             AlbumArtThumbnail(
@@ -205,13 +226,13 @@ private fun AlbumCard(album: AlbumSummary, onClick: () -> Unit) {
 private fun ArtistsTab(artists: List<ArtistSummary>, onArtistClick: (ArtistSummary) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(artists, key = { it.name }) { artist ->
-            ArtistRow(artist = artist, onClick = { onArtistClick(artist) })
+            ArtistRow(artist = artist, onClick = { onArtistClick(artist) }, modifier = Modifier.animateItem())
         }
     }
 }
 
 @Composable
-private fun ArtistRow(artist: ArtistSummary, onClick: () -> Unit) {
+private fun ArtistRow(artist: ArtistSummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
     ListItem(
         headlineContent = { Text(artist.name) },
         supportingContent = {
@@ -219,7 +240,7 @@ private fun ArtistRow(artist: ArtistSummary, onClick: () -> Unit) {
             val songWord = if (artist.tracks.size == 1) "song" else "songs"
             Text("${artist.albumCount} $albumWord - ${artist.tracks.size} $songWord")
         },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
     )

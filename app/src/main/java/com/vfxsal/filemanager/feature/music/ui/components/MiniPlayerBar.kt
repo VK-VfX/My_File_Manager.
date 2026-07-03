@@ -1,5 +1,14 @@
 package com.vfxsal.filemanager.feature.music.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,11 +47,16 @@ fun MiniPlayerBar(
     } else {
         0f
     }
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        label = "miniPlayerProgress",
+    )
 
     Surface(modifier = modifier.fillMaxWidth(), tonalElevation = 3.dp, shadowElevation = 3.dp) {
         Column {
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(2.dp),
@@ -71,10 +86,19 @@ fun MiniPlayerBar(
                     )
                 }
                 IconButton(onClick = onTogglePlayPause) {
-                    Icon(
-                        imageVector = if (playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (playback.isPlaying) "Pause" else "Play",
-                    )
+                    AnimatedContent(
+                        targetState = playback.isPlaying,
+                        transitionSpec = {
+                            (fadeIn(tween(150)) + scaleIn(initialScale = 0.7f, animationSpec = tween(150))) togetherWith
+                                (fadeOut(tween(100)) + scaleOut(targetScale = 0.7f, animationSpec = tween(100)))
+                        },
+                        label = "miniPlayerPlayPauseIcon",
+                    ) { isPlaying ->
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isPlaying) "Pause" else "Play",
+                        )
+                    }
                 }
             }
         }

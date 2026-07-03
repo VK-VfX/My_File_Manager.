@@ -74,6 +74,7 @@ fun VideoFolderScreen(
                             video = video,
                             imageLoader = imageLoader,
                             onClick = { onVideoClick(video) },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }

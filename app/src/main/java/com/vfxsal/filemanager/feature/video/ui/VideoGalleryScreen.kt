@@ -1,5 +1,6 @@
 package com.vfxsal.filemanager.feature.video.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,42 +50,49 @@ fun VideoGalleryScreen(
         topBar = { TopAppBar(title = { Text("Video") }) },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            when {
-                uiState.isLoading && !uiState.hasLoaded -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                uiState.hasLoaded && uiState.allVideos.isEmpty() -> {
-                    Text(
-                        text = "No videos found on this device",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.align(Alignment.Center),
-                    )
-                }
-                else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        TabRow(selectedTabIndex = selectedTab) {
-                            Tab(
-                                selected = selectedTab == TAB_FOLDERS,
-                                onClick = { selectedTab = TAB_FOLDERS },
-                                text = { Text("Folders") },
-                            )
-                            Tab(
-                                selected = selectedTab == TAB_ALL_VIDEOS,
-                                onClick = { selectedTab = TAB_ALL_VIDEOS },
-                                text = { Text("All videos") },
-                            )
-                        }
-                        when (selectedTab) {
-                            TAB_FOLDERS -> FoldersGrid(
-                                folders = uiState.folders,
-                                imageLoader = imageLoader,
-                                onFolderClick = onFolderClick,
-                            )
-                            else -> VideosGrid(
-                                videos = uiState.allVideos,
-                                imageLoader = imageLoader,
-                                onVideoClick = onVideoClick,
-                            )
+            val galleryContentState = when {
+                uiState.isLoading && !uiState.hasLoaded -> "loading"
+                uiState.hasLoaded && uiState.allVideos.isEmpty() -> "empty"
+                else -> "content"
+            }
+            Crossfade(targetState = galleryContentState, label = "videoGalleryContent") { state ->
+                when (state) {
+                    "loading" -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+                    "empty" -> {
+                        Text(
+                            text = "No videos found on this device",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.align(Alignment.Center),
+                        )
+                    }
+                    else -> {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            TabRow(selectedTabIndex = selectedTab) {
+                                Tab(
+                                    selected = selectedTab == TAB_FOLDERS,
+                                    onClick = { selectedTab = TAB_FOLDERS },
+                                    text = { Text("Folders") },
+                                )
+                                Tab(
+                                    selected = selectedTab == TAB_ALL_VIDEOS,
+                                    onClick = { selectedTab = TAB_ALL_VIDEOS },
+                                    text = { Text("All videos") },
+                                )
+                            }
+                            when (selectedTab) {
+                                TAB_FOLDERS -> FoldersGrid(
+                                    folders = uiState.folders,
+                                    imageLoader = imageLoader,
+                                    onFolderClick = onFolderClick,
+                                )
+                                else -> VideosGrid(
+                                    videos = uiState.allVideos,
+                                    imageLoader = imageLoader,
+                                    onVideoClick = onVideoClick,
+                                )
+                            }
                         }
                     }
                 }
@@ -111,6 +119,7 @@ private fun FoldersGrid(
                 folder = folder,
                 imageLoader = imageLoader,
                 onClick = { onFolderClick(folder) },
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -134,6 +143,7 @@ private fun VideosGrid(
                 video = video,
                 imageLoader = imageLoader,
                 onClick = { onVideoClick(video) },
+                modifier = Modifier.animateItem(),
             )
         }
     }

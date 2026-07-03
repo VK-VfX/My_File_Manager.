@@ -2,6 +2,11 @@ package com.vfxsal.filemanager.feature.files
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
@@ -48,10 +53,18 @@ fun FilesPermissionGate(content: @Composable () -> Unit) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (hasAccess) {
-        content()
-    } else {
-        PermissionRationaleScreen(onGrantClick = { launcher.launch(PermissionUtils.allFilesAccessIntent(context)) })
+    AnimatedContent(
+        targetState = hasAccess,
+        transitionSpec = {
+            (fadeIn(tween(250)) togetherWith fadeOut(tween(150)))
+        },
+        label = "filesPermissionGate",
+    ) { granted ->
+        if (granted) {
+            content()
+        } else {
+            PermissionRationaleScreen(onGrantClick = { launcher.launch(PermissionUtils.allFilesAccessIntent(context)) })
+        }
     }
 }
 

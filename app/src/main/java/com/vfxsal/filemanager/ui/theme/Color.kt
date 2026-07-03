@@ -46,13 +46,22 @@ val DarkOnTertiary = Color(0xFF5F1509)
 val DarkTertiaryContainer = Color(0xFF7F2C1D)
 val DarkOnTertiaryContainer = Color(0xFFFFDBD3)
 
-val DarkBackground = Color(0xFF131316)
-val DarkOnBackground = Color(0xFFE4E2E6)
-val DarkSurface = Color(0xFF131316)
-val DarkOnSurface = Color(0xFFE4E2E6)
-val DarkSurfaceVariant = Color(0xFF46464F)
-val DarkOnSurfaceVariant = Color(0xFFC7C5D0)
-val DarkOutline = Color(0xFF90909A)
+// True AMOLED black: background/surface are pure #000000 so OLED panels turn those
+// pixels fully off. The surfaceContainer* tiers step up in tiny increments from black
+// so cards/sheets/menus stay readably distinct without ever looking like a "grey app."
+val DarkBackground = Color(0xFF000000)
+val DarkOnBackground = Color(0xFFE7E6EA)
+val DarkSurface = Color(0xFF000000)
+val DarkOnSurface = Color(0xFFE7E6EA)
+val DarkSurfaceVariant = Color(0xFF19191D)
+val DarkOnSurfaceVariant = Color(0xFFC9C7D1)
+val DarkOutline = Color(0xFF54525C)
+
+val DarkSurfaceContainerLowest = Color(0xFF000000)
+val DarkSurfaceContainerLow = Color(0xFF0A0A0D)
+val DarkSurfaceContainer = Color(0xFF0F0F13)
+val DarkSurfaceContainerHigh = Color(0xFF17171C)
+val DarkSurfaceContainerHighest = Color(0xFF201F26)
 
 // Category accent colors used throughout Files / Clean screens.
 val CategoryImages = Color(0xFF4CAF50)

@@ -3,6 +3,11 @@ package com.vfxsal.filemanager.feature.video
 import android.Manifest
 import android.net.Uri
 import android.os.Build
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -148,14 +153,22 @@ private fun VideoPermissionGate(content: @Composable () -> Unit) {
     }
     val permissionState = rememberPermissionState(permission)
 
-    if (permissionState.status.isGranted) {
-        content()
-    } else {
-        Box(modifier = Modifier.fillMaxSize()) {
-            VideoPermissionRationale(
-                shouldShowRationale = permissionState.status.shouldShowRationale,
-                onRequestPermission = { permissionState.launchPermissionRequest() },
-            )
+    AnimatedContent(
+        targetState = permissionState.status.isGranted,
+        transitionSpec = {
+            (fadeIn(tween(250)) togetherWith fadeOut(tween(150)))
+        },
+        label = "videoPermissionGate",
+    ) { granted ->
+        if (granted) {
+            content()
+        } else {
+            Box(modifier = Modifier.fillMaxSize()) {
+                VideoPermissionRationale(
+                    shouldShowRationale = permissionState.status.shouldShowRationale,
+                    onRequestPermission = { permissionState.launchPermissionRequest() },
+                )
+            }
         }
     }
 }

@@ -1,6 +1,18 @@
 package com.vfxsal.filemanager.feature.files.browse
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -107,7 +119,11 @@ fun DirectoryBrowserScreen(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
-                if (!clipboardState.isEmpty) {
+                AnimatedVisibility(
+                    visible = !clipboardState.isEmpty,
+                    enter = fadeIn(tween(200, easing = FastOutSlowInEasing)) + expandVertically(tween(200, easing = FastOutSlowInEasing)),
+                    exit = fadeOut(tween(150)) + shrinkVertically(tween(150)),
+                ) {
                     PasteBanner(
                         count = clipboardState.paths.size,
                         mode = clipboardState.mode,
@@ -130,7 +146,11 @@ fun DirectoryBrowserScreen(
             }
         },
         bottomBar = {
-            if (uiState.selectionMode) {
+            AnimatedVisibility(
+                visible = uiState.selectionMode,
+                enter = slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(220)),
+                exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(180)),
+            ) {
                 SelectionActionBar(
                     selectionCount = uiState.selectedPaths.size,
                     onCopy = {
@@ -153,7 +173,11 @@ fun DirectoryBrowserScreen(
             }
         },
         floatingActionButton = {
-            if (!uiState.selectionMode) {
+            AnimatedVisibility(
+                visible = !uiState.selectionMode,
+                enter = fadeIn(tween(200, easing = FastOutSlowInEasing)) + scaleIn(initialScale = 0.8f, animationSpec = tween(200, easing = FastOutSlowInEasing)),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.8f, animationSpec = tween(150)),
+            ) {
                 FloatingActionButton(onClick = { showNewFolderDialog = true }) {
                     Icon(Icons.Filled.CreateNewFolder, contentDescription = "New folder")
                 }
@@ -162,33 +186,41 @@ fun DirectoryBrowserScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                uiState.entries.isEmpty() -> EmptyState(
-                    message = if (uiState.searchActive && uiState.searchQuery.isNotBlank()) {
-                        "No matches"
-                    } else {
-                        "This folder is empty"
-                    },
-                )
-                else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(uiState.entries, key = { it.path }) { entry ->
-                        FileListItem(
-                            entry = entry,
-                            selectionMode = uiState.selectionMode,
-                            selected = uiState.selectedPaths.contains(entry.path),
-                            onClick = {
-                                when {
-                                    uiState.selectionMode -> viewModel.toggleSelection(entry.path)
-                                    entry.isDirectory -> onNavigate(entry.path)
-                                    else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-                                        scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+            val browserContentState = when {
+                uiState.isLoading -> "loading"
+                uiState.entries.isEmpty() -> "empty"
+                else -> "list"
+            }
+            Crossfade(targetState = browserContentState, label = "directoryBrowserContent") { state ->
+                when (state) {
+                    "loading" -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    "empty" -> EmptyState(
+                        message = if (uiState.searchActive && uiState.searchQuery.isNotBlank()) {
+                            "No matches"
+                        } else {
+                            "This folder is empty"
+                        },
+                    )
+                    else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(uiState.entries, key = { it.path }) { entry ->
+                            FileListItem(
+                                entry = entry,
+                                selectionMode = uiState.selectionMode,
+                                selected = uiState.selectedPaths.contains(entry.path),
+                                onClick = {
+                                    when {
+                                        uiState.selectionMode -> viewModel.toggleSelection(entry.path)
+                                        entry.isDirectory -> onNavigate(entry.path)
+                                        else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
+                                            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                        }
                                     }
-                                }
-                            },
-                            onLongClick = { viewModel.enterSelectionMode(entry.path) },
-                            onInfoClick = { actionsState.showDetails(entry) },
-                        )
+                                },
+                                onLongClick = { viewModel.enterSelectionMode(entry.path) },
+                                onInfoClick = { actionsState.showDetails(entry) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
                     }
                 }
             }
