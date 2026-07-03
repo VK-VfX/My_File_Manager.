@@ -56,7 +56,9 @@ fun WallpaperGalleryScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Crossfade(targetState = uiState.isLoading, label = "wallpaperGalleryContent") { isLoading ->
                 if (isLoading) {
-                    CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CurlyLoadingIndicator()
+                    }
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),

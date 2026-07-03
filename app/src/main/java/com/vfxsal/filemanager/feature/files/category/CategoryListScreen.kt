@@ -72,7 +72,9 @@ fun CategoryListScreen(
             }
             Crossfade(targetState = categoryContentState, label = "categoryListContent") { state ->
                 when (state) {
-                    "loading" -> CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                    "loading" -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CurlyLoadingIndicator()
+                    }
                     "empty" -> EmptyState(message = "No ${categoryLabel(category).lowercase()} found")
                     else -> Column {
                         Text(

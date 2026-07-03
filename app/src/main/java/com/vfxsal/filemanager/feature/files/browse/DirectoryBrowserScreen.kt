@@ -194,7 +194,9 @@ fun DirectoryBrowserScreen(
             }
             Crossfade(targetState = browserContentState, label = "directoryBrowserContent") { state ->
                 when (state) {
-                    "loading" -> CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                    "loading" -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CurlyLoadingIndicator()
+                    }
                     "empty" -> EmptyState(
                         message = if (uiState.searchActive && uiState.searchQuery.isNotBlank()) {
                             "No matches"

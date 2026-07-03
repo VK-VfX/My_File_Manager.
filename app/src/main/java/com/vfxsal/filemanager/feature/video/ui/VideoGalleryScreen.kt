@@ -63,7 +63,9 @@ fun VideoGalleryScreen(
             Crossfade(targetState = galleryContentState, label = "videoGalleryContent") { state ->
                 when (state) {
                     "loading" -> {
-                        CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CurlyLoadingIndicator()
+                        }
                     }
                     "empty" -> {
                         Text(
