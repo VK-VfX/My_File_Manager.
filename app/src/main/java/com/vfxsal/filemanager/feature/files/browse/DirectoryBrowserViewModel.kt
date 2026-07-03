@@ -4,7 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.files.util.ZipOps
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -175,11 +177,31 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
 
     fun deleteSelected(onResult: (Int) -> Unit) {
         val targets = _uiState.value.selectedPaths.map { File(it) }
+        val context = getApplication<Application>()
         viewModelScope.launch {
-            val deleted = withContext(Dispatchers.IO) { targets.count { FileOps.delete(it) } }
+            val deleted = withContext(Dispatchers.IO) { targets.count { TrashOps.moveToTrash(context, it) } }
             clearSelection()
             fetchChildren()
             onResult(deleted)
+        }
+    }
+
+    fun compressSelected(onResult: (Boolean) -> Unit) {
+        val entries = selectedEntries()
+        if (entries.isEmpty()) {
+            onResult(false)
+            return
+        }
+        val targetDir = File(_uiState.value.path)
+        val destName = if (entries.size == 1) "${entries.first().name}.zip" else "Archive.zip"
+        viewModelScope.launch {
+            val dest = FileOps.uniqueDestination(targetDir, destName)
+            val success = withContext(Dispatchers.IO) { ZipOps.zip(entries.map { it.file }, dest) }
+            if (success) {
+                clearSelection()
+                fetchChildren()
+            }
+            onResult(success)
         }
     }
 

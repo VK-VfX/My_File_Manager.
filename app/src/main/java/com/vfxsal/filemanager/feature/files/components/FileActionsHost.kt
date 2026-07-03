@@ -10,7 +10,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.files.util.ZipOps
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -88,6 +90,22 @@ fun FileActionsHost(
             },
             onRename = { state.requestRename(entry) },
             onDelete = { state.requestDelete(entry) },
+            onExtract = if (entry.extension.lowercase() == "zip") {
+                {
+                    state.dismissDetails()
+                    scope.launch {
+                        val destDir = File(entry.file.parentFile, entry.file.nameWithoutExtension)
+                        val success = withContext(Dispatchers.IO) { ZipOps.unzip(entry.file, destDir) }
+                        if (success) {
+                            onChanged()
+                        } else {
+                            snackbarHostState.showSnackbar("Could not extract archive")
+                        }
+                    }
+                }
+            } else {
+                null
+            },
         )
     }
 
@@ -121,7 +139,7 @@ fun FileActionsHost(
             onConfirm = {
                 state.dismissDelete()
                 scope.launch {
-                    withContext(Dispatchers.IO) { FileOps.delete(entry.file) }
+                    withContext(Dispatchers.IO) { TrashOps.moveToTrash(context, entry.file) }
                     onChanged()
                 }
             },

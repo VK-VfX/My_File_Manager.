@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -49,6 +52,10 @@ fun FilesHomeScreen(
     onOpenCategory: (FileCategory) -> Unit,
     onOpenDirectory: (String) -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenTrash: () -> Unit,
+    onOpenStorageBreakdown: () -> Unit,
+    onOpenAbout: () -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -60,7 +67,19 @@ fun FilesHomeScreen(
     LaunchedEffect(Unit) { viewModel.refresh() }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Files") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Files") },
+                actions = {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search all files")
+                    }
+                    IconButton(onClick = onOpenAbout) {
+                        Icon(Icons.Filled.Info, contentDescription = "About")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -72,7 +91,7 @@ fun FilesHomeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
-                    item { StorageUsageCard(uiState.storageStats) }
+                    item { StorageUsageCard(uiState.storageStats, onClick = onOpenStorageBreakdown) }
 
                     item {
                         Column {
@@ -94,6 +113,10 @@ fun FilesHomeScreen(
                         InternalStorageRow(
                             onClick = { onOpenDirectory(Environment.getExternalStorageDirectory().absolutePath) },
                         )
+                    }
+
+                    item {
+                        RecycleBinRow(onClick = onOpenTrash)
                     }
 
                     if (uiState.recentFiles.isNotEmpty()) {
@@ -127,10 +150,13 @@ fun FilesHomeScreen(
 }
 
 @Composable
-private fun StorageUsageCard(stats: StorageStats?) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun StorageUsageCard(stats: StorageStats?, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp)) {
-            Text("Storage", style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Text("Storage", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(12.dp))
             if (stats != null) {
                 LinearProgressIndicator(
@@ -248,6 +274,29 @@ private fun InternalStorageRow(onClick: () -> Unit) {
                 Text("Internal Storage", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = "Browse all files",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun RecycleBinRow(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Recycle Bin", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = "Restore or permanently delete recently removed items",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

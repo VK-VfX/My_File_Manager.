@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +39,7 @@ fun CategoryListScreen(
     categoryName: String,
     onBack: () -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenInstalledApps: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(),
 ) {
     val category = remember(categoryName) {
@@ -58,6 +60,13 @@ fun CategoryListScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (category == FileCategory.APKS) {
+                        IconButton(onClick = onOpenInstalledApps) {
+                            Icon(Icons.Filled.Apps, contentDescription = "Installed apps")
+                        }
                     }
                 },
             )

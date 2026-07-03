@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
@@ -168,6 +169,13 @@ fun DirectoryBrowserScreen(
                         val files = viewModel.selectedEntries().filterNot { it.isDirectory }.map { it.file }
                         if (!FileOps.tryShare(context, files)) {
                             scope.launch { snackbarHostState.showSnackbar("Nothing to share") }
+                        }
+                    },
+                    onCompress = {
+                        viewModel.compressSelected { success ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(if (success) "Compressed" else "Could not compress")
+                            }
                         }
                     },
                 )
@@ -422,11 +430,13 @@ private fun SelectionActionBar(
     onDelete: () -> Unit,
     onRename: () -> Unit,
     onShare: () -> Unit,
+    onCompress: () -> Unit,
 ) {
     BottomAppBar {
         IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy") }
         IconButton(onClick = onMove) { Icon(Icons.Filled.ContentCut, contentDescription = "Move") }
         IconButton(onClick = onShare) { Icon(Icons.Filled.Share, contentDescription = "Share") }
+        IconButton(onClick = onCompress) { Icon(Icons.Filled.FolderZip, contentDescription = "Compress") }
         if (selectionCount == 1) {
             IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = "Rename") }
         }

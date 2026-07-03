@@ -9,10 +9,15 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.vfxsal.filemanager.data.FileCategory
+import com.vfxsal.filemanager.feature.apps.InstalledAppsScreen
+import com.vfxsal.filemanager.feature.files.about.AboutScreen
 import com.vfxsal.filemanager.feature.files.browse.DirectoryBrowserScreen
 import com.vfxsal.filemanager.feature.files.category.CategoryListScreen
 import com.vfxsal.filemanager.feature.files.editor.TextEditorScreen
 import com.vfxsal.filemanager.feature.files.home.FilesHomeScreen
+import com.vfxsal.filemanager.feature.files.search.GlobalSearchScreen
+import com.vfxsal.filemanager.feature.files.storage.StorageBreakdownScreen
+import com.vfxsal.filemanager.feature.files.trash.TrashScreen
 import com.vfxsal.filemanager.feature.files.util.decodePath
 import com.vfxsal.filemanager.feature.files.util.encodePath
 
@@ -20,6 +25,11 @@ const val FILES_GRAPH_ROUTE = "files"
 private const val CATEGORY_ROUTE = "files/category/{categoryName}"
 private const val BROWSE_ROUTE = "files/browse/{encodedPath}"
 private const val EDIT_ROUTE = "files/edit/{encodedPath}"
+private const val SEARCH_ROUTE = "files/search"
+private const val TRASH_ROUTE = "files/trash"
+private const val STORAGE_ROUTE = "files/storage"
+private const val ABOUT_ROUTE = "files/about"
+private const val INSTALLED_APPS_ROUTE = "files/apps"
 
 fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
     composable(FILES_GRAPH_ROUTE) {
@@ -34,7 +44,43 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
                 onEditFile = { path ->
                     navController.navigate("files/edit/${encodePath(path)}")
                 },
+                onOpenSearch = { navController.navigate(SEARCH_ROUTE) },
+                onOpenTrash = { navController.navigate(TRASH_ROUTE) },
+                onOpenStorageBreakdown = { navController.navigate(STORAGE_ROUTE) },
+                onOpenAbout = { navController.navigate(ABOUT_ROUTE) },
             )
+        }
+    }
+
+    composable(SEARCH_ROUTE) {
+        FilesPermissionGate {
+            GlobalSearchScreen(
+                onBack = { navController.popBackStack() },
+                onOpenDirectory = { path -> navController.navigate("files/browse/${encodePath(path)}") },
+                onEditFile = { path -> navController.navigate("files/edit/${encodePath(path)}") },
+            )
+        }
+    }
+
+    composable(TRASH_ROUTE) {
+        FilesPermissionGate {
+            TrashScreen(onBack = { navController.popBackStack() })
+        }
+    }
+
+    composable(STORAGE_ROUTE) {
+        FilesPermissionGate {
+            StorageBreakdownScreen(onBack = { navController.popBackStack() })
+        }
+    }
+
+    composable(ABOUT_ROUTE) {
+        AboutScreen(onBack = { navController.popBackStack() })
+    }
+
+    composable(INSTALLED_APPS_ROUTE) {
+        FilesPermissionGate {
+            InstalledAppsScreen(onBack = { navController.popBackStack() })
         }
     }
 
@@ -50,6 +96,7 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
                 onEditFile = { path ->
                     navController.navigate("files/edit/${encodePath(path)}")
                 },
+                onOpenInstalledApps = { navController.navigate(INSTALLED_APPS_ROUTE) },
             )
         }
     }

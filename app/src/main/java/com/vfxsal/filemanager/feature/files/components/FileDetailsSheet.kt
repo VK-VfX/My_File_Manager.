@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -30,6 +31,7 @@ fun FileDetailsSheet(
     onShare: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onExtract: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -78,6 +80,9 @@ fun FileDetailsSheet(
             if (!entry.isDirectory) {
                 DetailActionRow(icon = Icons.Filled.OpenInNew, label = "Open", onClick = onOpen)
                 DetailActionRow(icon = Icons.Filled.Share, label = "Share", onClick = onShare)
+            }
+            if (onExtract != null) {
+                DetailActionRow(icon = Icons.Filled.FolderZip, label = "Extract", onClick = onExtract)
             }
             DetailActionRow(icon = Icons.Filled.Edit, label = "Rename", onClick = onRename)
             DetailActionRow(icon = Icons.Filled.Delete, label = "Delete", onClick = onDelete)

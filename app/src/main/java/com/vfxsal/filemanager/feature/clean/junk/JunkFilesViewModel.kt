@@ -7,6 +7,7 @@ import com.vfxsal.filemanager.feature.clean.model.JunkCategory
 import com.vfxsal.filemanager.feature.clean.model.JunkGroup
 import com.vfxsal.filemanager.feature.clean.model.JunkItem
 import com.vfxsal.filemanager.feature.clean.scan.JunkScanner
+import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -92,9 +93,11 @@ class JunkFilesViewModel(application: Application) : AndroidViewModel(applicatio
     private fun deleteJunkItem(item: JunkItem) {
         try {
             if (item.category == JunkCategory.APP_CACHE) {
+                // Cache contents are regenerated automatically and not worth recovering, so
+                // these are deleted outright rather than trashed.
                 item.file.listFiles()?.forEach { it.deleteRecursively() }
             } else {
-                item.file.deleteRecursively()
+                TrashOps.moveToTrash(getApplication<Application>(), item.file)
             }
         } catch (e: SecurityException) {
             // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
