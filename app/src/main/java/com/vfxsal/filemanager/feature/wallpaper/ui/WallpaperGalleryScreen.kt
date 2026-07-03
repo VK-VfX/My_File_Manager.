@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperThumbnail
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperViewModel
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +56,7 @@ fun WallpaperGalleryScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Crossfade(targetState = uiState.isLoading, label = "wallpaperGalleryContent") { isLoading ->
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),

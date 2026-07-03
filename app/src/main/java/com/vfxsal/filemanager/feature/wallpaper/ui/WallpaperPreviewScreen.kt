@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +45,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperEvent
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperRenderer
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperTarget
 import com.vfxsal.filemanager.feature.wallpaper.WallpaperViewModel
@@ -109,7 +109,7 @@ fun WallpaperPreviewScreen(
 
             val bitmap = previewBitmap
             if (bitmap == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
+                CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
             } else {
                 Image(
                     bitmap = bitmap,
@@ -176,7 +176,7 @@ fun WallpaperPreviewScreen(
                 modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = Color.White)
+                CurlyLoadingIndicator(color = Color.White)
             }
         }
 

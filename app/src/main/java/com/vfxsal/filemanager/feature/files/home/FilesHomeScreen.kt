@@ -25,17 +25,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.util.FormatUtils
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.StorageStats
+import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -61,7 +65,7 @@ fun FilesHomeScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (uiState.isLoading && uiState.storageStats == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -274,14 +278,34 @@ private fun RecentFileCard(entry: FileEntry, onClick: () -> Unit, onInfoClick: (
             .clickable(onClick = onClick),
     ) {
         Column(Modifier.padding(12.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(entry.category.color().copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(entry.category.icon, contentDescription = null, tint = entry.category.color())
+            val showsThumbnail = entry.category == FileCategory.IMAGES || entry.category == FileCategory.VIDEOS
+            if (showsThumbnail) {
+                val thumbnailLoader = rememberMediaThumbnailLoader()
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(entry.category.color().copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AsyncImage(
+                        model = entry.file,
+                        imageLoader = thumbnailLoader,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(entry.category.color().copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(entry.category.icon, contentDescription = null, tint = entry.category.color())
+                }
             }
             Spacer(Modifier.height(8.dp))
             Text(entry.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

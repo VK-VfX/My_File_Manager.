@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.FormatUtils
 
 @Composable
@@ -201,7 +201,7 @@ fun ScanningIndicator(scannedCount: Int, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator()
+        CurlyLoadingIndicator()
         Spacer(Modifier.height(12.dp))
         Text("Scanning… $scannedCount items", style = MaterialTheme.typography.bodyMedium)
     }

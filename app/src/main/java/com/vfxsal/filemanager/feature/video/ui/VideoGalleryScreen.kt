@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -33,6 +32,7 @@ import coil.ImageLoader
 import com.vfxsal.filemanager.feature.video.VideoGalleryUiState
 import com.vfxsal.filemanager.feature.video.data.VideoFolder
 import com.vfxsal.filemanager.feature.video.data.VideoItem
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 
 private const val TAB_FOLDERS = 0
 private const val TAB_ALL_VIDEOS = 1
@@ -63,7 +63,7 @@ fun VideoGalleryScreen(
             Crossfade(targetState = galleryContentState, label = "videoGalleryContent") { state ->
                 when (state) {
                     "loading" -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
                     }
                     "empty" -> {
                         Text(

@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -62,6 +61,7 @@ import com.vfxsal.filemanager.feature.clean.ui.CleanBottomBar
 import com.vfxsal.filemanager.feature.clean.ui.DeleteConfirmationDialog
 import com.vfxsal.filemanager.feature.clean.ui.EmptyResultsMessage
 import com.vfxsal.filemanager.feature.clean.ui.GroupHeader
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
 
@@ -131,7 +131,7 @@ fun DuplicateFilesScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            CircularProgressIndicator()
+                            CurlyLoadingIndicator()
                             Spacer(Modifier.height(12.dp))
                             Text("$phaseLabel… ${uiState.progressCount}", style = MaterialTheme.typography.bodyMedium)
                         }

@@ -28,6 +28,7 @@ import com.vfxsal.filemanager.feature.files.components.FileListItem
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.home.categoryLabel
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.FormatUtils
 import kotlinx.coroutines.launch
 
@@ -71,7 +72,7 @@ fun CategoryListScreen(
             }
             Crossfade(targetState = categoryContentState, label = "categoryListContent") { state ->
                 when (state) {
-                    "loading" -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    "loading" -> CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
                     "empty" -> EmptyState(message = "No ${categoryLabel(category).lowercase()} found")
                     else -> Column {
                         Text(
