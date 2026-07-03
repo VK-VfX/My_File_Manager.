@@ -16,8 +16,9 @@ import com.vfxsal.filemanager.R
 
 /**
  * Top-level, bottom-navigation-bar destinations. Each corresponds to a nested
- * nav graph contributed by its own feature package (see `*NavGraph.kt` files
- * under `feature/*`), keyed by [graphRoute] as the nested graph's start route.
+ * nav graph contributed by its own feature package (see the `*NavGraph.kt`
+ * file under each `feature` subpackage), keyed by [graphRoute] as the nested
+ * graph's start route.
  */
 enum class TopLevelDestination(
     val graphRoute: String,

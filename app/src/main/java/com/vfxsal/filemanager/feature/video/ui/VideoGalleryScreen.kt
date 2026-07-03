@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -32,6 +33,7 @@ import com.vfxsal.filemanager.feature.video.data.VideoItem
 private const val TAB_FOLDERS = 0
 private const val TAB_ALL_VIDEOS = 1
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoGalleryScreen(
     uiState: VideoGalleryUiState,

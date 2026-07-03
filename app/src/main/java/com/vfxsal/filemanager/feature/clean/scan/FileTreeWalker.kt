@@ -8,7 +8,7 @@ import kotlinx.coroutines.ensureActive
  * Depth-first, non-recursive walker over a directory tree.
  *
  * On Android 11+ (API 30+), MANAGE_EXTERNAL_STORAGE still does not grant access to
- * other apps' `Android/data/*` and `Android/obb/*` directories - that's an OS-level
+ * other apps' `Android/data` and `Android/obb` subtrees - that's an OS-level
  * carve-out. Listing them throws SecurityException or silently returns nothing, so
  * every caller must treat those subtrees as opaque rather than trying to "fix" access
  * with more permissions. [isAndroidDataOrObb] is the default [skipSubtree] predicate;
