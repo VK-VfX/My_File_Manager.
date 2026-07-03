@@ -1,16 +1,22 @@
 package com.vfxsal.filemanager.ui.nav
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -88,10 +94,26 @@ fun AppRoot() {
                                 }
                             },
                             icon = {
-                                Icon(
-                                    imageVector = if (selected) destination.selectedIcon else destination.unselectedIcon,
-                                    contentDescription = stringResource(destination.labelRes),
-                                )
+                                AnimatedContent(
+                                    targetState = selected,
+                                    transitionSpec = {
+                                        (
+                                            scaleIn(
+                                                initialScale = 0.6f,
+                                                animationSpec = spring(
+                                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                    stiffness = Spring.StiffnessMediumLow,
+                                                ),
+                                            ) + fadeIn(tween(150))
+                                        ).togetherWith(scaleOut(targetScale = 0.6f, animationSpec = tween(100)) + fadeOut(tween(100)))
+                                    },
+                                    label = "navIcon",
+                                ) { isSelected ->
+                                    Icon(
+                                        imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                                        contentDescription = stringResource(destination.labelRes),
+                                    )
+                                }
                             },
                             label = { Text(stringResource(destination.labelRes)) },
                         )
