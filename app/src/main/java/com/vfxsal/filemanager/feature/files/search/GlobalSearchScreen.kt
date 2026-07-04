@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.feature.files.components.EmptyState
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.FileListItem
@@ -44,6 +45,7 @@ fun GlobalSearchScreen(
     onBack: () -> Unit,
     onOpenDirectory: (String) -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenImage: (String) -> Unit,
     viewModel: GlobalSearchViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,10 +99,11 @@ fun GlobalSearchScreen(
                                 selectionMode = false,
                                 selected = false,
                                 onClick = {
-                                    if (entry.isDirectory) {
-                                        onOpenDirectory(entry.path)
-                                    } else if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-                                        scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                    when {
+                                        entry.isDirectory -> onOpenDirectory(entry.path)
+                                        entry.category == FileCategory.IMAGES -> onOpenImage(entry.path)
+                                        !FileOps.openOrEdit(context, entry, onEditFile) ->
+                                            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                     }
                                 },
                                 onLongClick = { actionsState.showDetails(entry) },

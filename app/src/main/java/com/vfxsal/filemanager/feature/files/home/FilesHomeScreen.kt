@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
@@ -60,10 +61,12 @@ fun FilesHomeScreen(
     onOpenCategory: (FileCategory) -> Unit,
     onOpenDirectory: (String) -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenImage: (String) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenTrash: () -> Unit,
     onOpenStorageBreakdown: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenVault: () -> Unit,
     onOpenTimeline: () -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
@@ -87,6 +90,9 @@ fun FilesHomeScreen(
                 actions = {
                     IconButton(onClick = onOpenSearch) {
                         Icon(Icons.Filled.Search, contentDescription = "Search all files")
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     IconButton(onClick = onOpenAbout) {
                         Icon(Icons.Filled.Info, contentDescription = "About")
@@ -170,8 +176,10 @@ fun FilesHomeScreen(
                                 RecentFilesRow(
                                     files = uiState.recentFiles,
                                     onFileClick = { entry ->
-                                        if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-                                            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                        when {
+                                            entry.category == FileCategory.IMAGES -> onOpenImage(entry.path)
+                                            !FileOps.openOrEdit(context, entry, onEditFile) ->
+                                                scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                         }
                                     },
                                     onInfoClick = { entry -> actionsState.showDetails(entry) },

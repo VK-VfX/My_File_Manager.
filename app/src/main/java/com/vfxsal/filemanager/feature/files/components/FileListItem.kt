@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,8 +43,13 @@ fun FileListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 2.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+            )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectionMode) {
@@ -66,8 +72,9 @@ fun FileListItem(
                 AsyncImage(
                     model = entry.file,
                     imageLoader = thumbnailLoader,
-                    contentDescription = null,
+                    contentDescription = "${entry.name} thumbnail",
                     contentScale = ContentScale.Crop,
+                    error = rememberVectorPainter(entry.category.icon),
                     modifier = Modifier.matchParentSize(),
                 )
                 if (entry.category == FileCategory.VIDEOS) {

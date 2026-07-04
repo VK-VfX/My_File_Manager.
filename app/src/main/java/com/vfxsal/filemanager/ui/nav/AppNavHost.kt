@@ -42,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import com.vfxsal.filemanager.feature.clean.cleanNavGraph
 import com.vfxsal.filemanager.feature.files.filesNavGraph
 import com.vfxsal.filemanager.feature.music.musicNavGraph
+import com.vfxsal.filemanager.feature.settings.SettingsViewModel
 import com.vfxsal.filemanager.feature.video.videoNavGraph
 import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
 
@@ -77,7 +78,7 @@ private val AppPopExitTransition: AnimatedContentTransitionScope<NavBackStackEnt
  * those routes live under a different route string within each feature graph.
  */
 @Composable
-fun AppRoot() {
+fun AppRoot(settingsViewModel: SettingsViewModel) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -121,7 +122,7 @@ fun AppRoot() {
             popEnterTransition = AppPopEnterTransition,
             popExitTransition = AppPopExitTransition,
         ) {
-            filesNavGraph(navController)
+            filesNavGraph(navController, settingsViewModel)
             cleanNavGraph(navController)
             videoNavGraph(navController)
             musicNavGraph(navController)

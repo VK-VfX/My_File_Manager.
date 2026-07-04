@@ -66,6 +66,7 @@ private const val GRID_COLUMNS = 3
 fun TimelineScreen(
     onBack: () -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenImage: (String) -> Unit,
     viewModel: TimelineViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,8 +78,10 @@ fun TimelineScreen(
     LaunchedEffect(Unit) { viewModel.load() }
 
     val onOpen: (FileEntry) -> Unit = { entry ->
-        if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+        when {
+            entry.category == FileCategory.IMAGES -> onOpenImage(entry.path)
+            !FileOps.openOrEdit(context, entry, onEditFile) ->
+                scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
         }
     }
 

@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.ClipboardMode
 import com.vfxsal.filemanager.feature.files.ClipboardViewModel
@@ -77,6 +78,7 @@ fun DirectoryBrowserScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenImage: (path: String, sortBy: SortBy, ascending: Boolean) -> Unit,
     clipboardViewModel: ClipboardViewModel,
     viewModel: DirectoryBrowserViewModel = viewModel(),
 ) {
@@ -241,6 +243,8 @@ fun DirectoryBrowserScreen(
                                     when {
                                         uiState.selectionMode -> viewModel.toggleSelection(entry.path)
                                         entry.isDirectory -> onNavigate(entry.path)
+                                        entry.category == FileCategory.IMAGES ->
+                                            onOpenImage(entry.path, uiState.sortBy, uiState.ascending)
                                         else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                                             scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                         }

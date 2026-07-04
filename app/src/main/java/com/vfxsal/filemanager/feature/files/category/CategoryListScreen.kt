@@ -66,6 +66,7 @@ fun CategoryListScreen(
     categoryName: String,
     onBack: () -> Unit,
     onEditFile: (String) -> Unit,
+    onOpenImage: (path: String, sortBy: SortBy, ascending: Boolean) -> Unit,
     clipboardViewModel: ClipboardViewModel,
     onOpenInstalledApps: () -> Unit = {},
     viewModel: CategoryViewModel = viewModel(),
@@ -215,6 +216,8 @@ fun CategoryListScreen(
                                     onClick = {
                                         when {
                                             uiState.selectionMode -> viewModel.toggleSelection(entry.path)
+                                            entry.category == FileCategory.IMAGES ->
+                                                onOpenImage(entry.path, uiState.sortBy, uiState.ascending)
                                             else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
                                                 scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
                                             }
