@@ -1,6 +1,14 @@
 package com.vfxsal.filemanager.feature.video.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -23,16 +33,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import com.vfxsal.filemanager.feature.video.VideoGalleryUiState
 import com.vfxsal.filemanager.feature.video.data.VideoFolder
 import com.vfxsal.filemanager.feature.video.data.VideoItem
 import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
+import kotlinx.coroutines.launch
 
 private const val TAB_FOLDERS = 0
 private const val TAB_ALL_VIDEOS = 1
@@ -44,15 +57,50 @@ fun VideoGalleryScreen(
     imageLoader: ImageLoader,
     onFolderClick: (VideoFolder) -> Unit,
     onVideoClick: (VideoItem) -> Unit,
-    onDeleteVideo: (VideoItem) -> Unit,
+    onEnterSelectionMode: (Long) -> Unit,
+    onToggleSelection: (Long) -> Unit,
+    onSelectAll: (List<VideoItem>) -> Unit,
+    onClearSelection: () -> Unit,
+    onDeleteSelected: (List<VideoItem>, (Int) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedTab by remember { mutableIntStateOf(TAB_FOLDERS) }
-    var pendingDelete by remember { mutableStateOf<VideoItem?>(null) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    BackHandler(enabled = uiState.selectionMode) { onClearSelection() }
 
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text("Video") }) },
+        topBar = {
+            if (uiState.selectionMode) {
+                VideoSelectionTopBar(
+                    selectedCount = uiState.selectedIds.size,
+                    onClear = onClearSelection,
+                    onSelectAll = { onSelectAll(uiState.allVideos) },
+                )
+            } else {
+                TopAppBar(title = { Text("Video") })
+            }
+        },
+        bottomBar = {
+            AnimatedVisibility(
+                visible = uiState.selectionMode,
+                enter = slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(220)),
+                exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(180)),
+            ) {
+                VideoSelectionBottomBar(
+                    onShare = {
+                        val uris = uiState.allVideos.filter { it.id in uiState.selectedIds }.map { it.uri }
+                        shareVideos(context, uris)
+                    },
+                    onDelete = { showDeleteSelectedDialog = true },
+                )
+            }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             val galleryContentState = when {
@@ -97,8 +145,22 @@ fun VideoGalleryScreen(
                                 else -> VideosGrid(
                                     videos = uiState.allVideos,
                                     imageLoader = imageLoader,
-                                    onVideoClick = onVideoClick,
-                                    onVideoLongClick = { pendingDelete = it },
+                                    selectionMode = uiState.selectionMode,
+                                    selectedIds = uiState.selectedIds,
+                                    onVideoClick = { video ->
+                                        if (uiState.selectionMode) {
+                                            onToggleSelection(video.id)
+                                        } else {
+                                            onVideoClick(video)
+                                        }
+                                    },
+                                    onVideoLongClick = { video ->
+                                        if (uiState.selectionMode) {
+                                            onToggleSelection(video.id)
+                                        } else {
+                                            onEnterSelectionMode(video.id)
+                                        }
+                                    },
                                 )
                             }
                         }
@@ -108,21 +170,23 @@ fun VideoGalleryScreen(
         }
     }
 
-    pendingDelete?.let { video ->
+    if (showDeleteSelectedDialog) {
         AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete video?") },
-            text = { Text("\"${video.displayName}\" will be permanently deleted from your device.") },
+            onDismissRequest = { showDeleteSelectedDialog = false },
+            title = { Text("Delete ${uiState.selectedIds.size} video(s)?") },
+            text = { Text("These videos will be permanently deleted from your device.") },
             confirmButton = {
                 TextButton(onClick = {
-                    onDeleteVideo(video)
-                    pendingDelete = null
+                    showDeleteSelectedDialog = false
+                    onDeleteSelected(uiState.allVideos) { count ->
+                        scope.launch { snackbarHostState.showSnackbar("Deleted $count video(s)") }
+                    }
                 }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteSelectedDialog = false }) { Text("Cancel") }
             },
         )
     }
@@ -156,6 +220,8 @@ private fun FoldersGrid(
 private fun VideosGrid(
     videos: List<VideoItem>,
     imageLoader: ImageLoader,
+    selectionMode: Boolean,
+    selectedIds: Set<Long>,
     onVideoClick: (VideoItem) -> Unit,
     onVideoLongClick: (VideoItem) -> Unit,
 ) {
@@ -172,6 +238,8 @@ private fun VideosGrid(
                 imageLoader = imageLoader,
                 onClick = { onVideoClick(video) },
                 onLongClick = { onVideoLongClick(video) },
+                selectionMode = selectionMode,
+                selected = video.id in selectedIds,
                 modifier = Modifier.animateItem(),
             )
         }

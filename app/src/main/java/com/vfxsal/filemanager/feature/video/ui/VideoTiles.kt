@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,6 +39,8 @@ fun VideoGridTile(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    selectionMode: Boolean = false,
+    selected: Boolean = false,
 ) {
     Column(modifier = modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)) {
         Box(
@@ -60,6 +63,20 @@ fun VideoGridTile(
                     .align(Alignment.BottomEnd)
                     .padding(4.dp),
             )
+            if (selectionMode) {
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                    )
+                }
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = null,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
+            }
         }
         Text(
             text = video.displayName,

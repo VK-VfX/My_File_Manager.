@@ -71,6 +71,15 @@ class MusicRepository(private val context: Context) {
             .sortedBy { it.title.lowercase() }
     }
 
+    /**
+     * Deletes both the underlying file and its MediaStore index entry in one call. Relies on
+     * the app's existing MANAGE_EXTERNAL_STORAGE grant (already required for the Files/Clean
+     * features) to avoid the per-item RecoverableSecurityException consent dialog that a
+     * scoped-storage app without broad access would otherwise hit here.
+     */
+    fun deleteTrack(track: Track): Boolean =
+        runCatching { context.contentResolver.delete(track.contentUri, null, null) > 0 }.getOrDefault(false)
+
     fun groupByArtist(tracks: List<Track>): List<ArtistSummary> {
         return tracks
             .groupBy { it.artist }

@@ -16,11 +16,13 @@ import com.vfxsal.filemanager.feature.music.data.Track
 import com.vfxsal.filemanager.feature.music.data.toMediaItem
 import com.vfxsal.filemanager.feature.music.player.MusicController
 import com.vfxsal.filemanager.feature.music.player.MusicPlaybackState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class MusicLibraryUiState(
     val isLoading: Boolean = true,
@@ -28,6 +30,8 @@ data class MusicLibraryUiState(
     val tracks: List<Track> = emptyList(),
     val albums: List<AlbumSummary> = emptyList(),
     val artists: List<ArtistSummary> = emptyList(),
+    val selectionMode: Boolean = false,
+    val selectedIds: Set<Long> = emptySet(),
 )
 
 /**
@@ -84,6 +88,50 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleShuffle() = controller.setShuffleModeEnabled(!playback.value.shuffleModeEnabled)
 
     fun cycleRepeatMode() = controller.cycleRepeatMode()
+
+    fun enterSelectionMode(id: Long) {
+        _library.update { it.copy(selectionMode = true, selectedIds = setOf(id)) }
+    }
+
+    fun toggleSelection(id: Long) {
+        _library.update { state ->
+            val newSelection = if (state.selectedIds.contains(id)) state.selectedIds - id else state.selectedIds + id
+            state.copy(selectedIds = newSelection, selectionMode = newSelection.isNotEmpty())
+        }
+    }
+
+    fun selectAllTracks() {
+        _library.update { it.copy(selectedIds = it.tracks.map { track -> track.id }.toSet(), selectionMode = true) }
+    }
+
+    fun clearSelection() {
+        _library.update { it.copy(selectedIds = emptySet(), selectionMode = false) }
+    }
+
+    fun deleteSelected(onResult: (Int) -> Unit) {
+        val selected = _library.value.selectedIds
+        val targets = _library.value.tracks.filter { it.id in selected }
+        viewModelScope.launch {
+            val deletedIds = withContext(Dispatchers.IO) {
+                targets.filter { repository.deleteTrack(it) }.map { it.id }.toSet()
+            }
+            if (deletedIds.isNotEmpty()) {
+                val updatedTracks = _library.value.tracks.filterNot { it.id in deletedIds }
+                _library.update {
+                    it.copy(
+                        tracks = updatedTracks,
+                        albums = repository.groupByAlbum(updatedTracks),
+                        artists = repository.groupByArtist(updatedTracks),
+                        selectedIds = emptySet(),
+                        selectionMode = false,
+                    )
+                }
+            } else {
+                clearSelection()
+            }
+            onResult(deletedIds.size)
+        }
+    }
 
     override fun onCleared() {
         controller.release()

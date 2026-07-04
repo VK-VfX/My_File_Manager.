@@ -19,6 +19,8 @@ data class VideoGalleryUiState(
     val hasLoaded: Boolean = false,
     val allVideos: List<VideoItem> = emptyList(),
     val folders: List<VideoFolder> = emptyList(),
+    val selectionMode: Boolean = false,
+    val selectedIds: Set<Long> = emptySet(),
 )
 
 /**
@@ -57,22 +59,51 @@ class VideoGalleryViewModel(application: Application) : AndroidViewModel(applica
 
     fun queueFor(key: String): List<VideoItem> = folderQueues[key].orEmpty()
 
-    /** [folderQueues] is a plain (non-thread-safe) map only ever touched from the main thread
-     *  elsewhere, so its update here is kept on Dispatchers.Main even though the delete itself
-     *  runs on IO. */
-    fun deleteVideo(video: VideoItem, onResult: (Boolean) -> Unit) {
+    fun enterSelectionMode(id: Long) {
+        _uiState.update { it.copy(selectionMode = true, selectedIds = setOf(id)) }
+    }
+
+    fun toggleSelection(id: Long) {
+        _uiState.update { state ->
+            val newSelection = if (state.selectedIds.contains(id)) state.selectedIds - id else state.selectedIds + id
+            state.copy(selectedIds = newSelection, selectionMode = newSelection.isNotEmpty())
+        }
+    }
+
+    fun selectAll(candidates: List<VideoItem>) {
+        _uiState.update { it.copy(selectedIds = candidates.map { video -> video.id }.toSet(), selectionMode = true) }
+    }
+
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedIds = emptySet(), selectionMode = false) }
+    }
+
+    fun deleteSelected(candidates: List<VideoItem>, onResult: (Int) -> Unit) {
+        val selected = _uiState.value.selectedIds
+        val targets = candidates.filter { it.id in selected }
         viewModelScope.launch {
-            val success = withContext(Dispatchers.IO) { repository.deleteVideo(video) }
-            if (success) {
-                val updatedVideos = _uiState.value.allVideos.filterNot { it.id == video.id }
+            val deletedIds = withContext(Dispatchers.IO) {
+                targets.filter { repository.deleteVideo(it) }.map { it.id }.toSet()
+            }
+            if (deletedIds.isNotEmpty()) {
+                val updatedVideos = _uiState.value.allVideos.filterNot { it.id in deletedIds }
                 val updatedFolders = updatedVideos
                     .groupBy { it.bucketName }
                     .map { (name, items) -> VideoFolder(name, items) }
                     .sortedBy { it.name.lowercase() }
-                _uiState.update { it.copy(allVideos = updatedVideos, folders = updatedFolders) }
-                folderQueues.replaceAll { _, queue -> queue.filterNot { it.id == video.id } }
+                _uiState.update {
+                    it.copy(
+                        allVideos = updatedVideos,
+                        folders = updatedFolders,
+                        selectedIds = emptySet(),
+                        selectionMode = false,
+                    )
+                }
+                folderQueues.replaceAll { _, queue -> queue.filterNot { item -> item.id in deletedIds } }
+            } else {
+                clearSelection()
             }
-            onResult(success)
+            onResult(deletedIds.size)
         }
     }
 
