@@ -17,9 +17,11 @@ import com.vfxsal.filemanager.feature.files.editor.TextEditorScreen
 import com.vfxsal.filemanager.feature.files.home.FilesHomeScreen
 import com.vfxsal.filemanager.feature.files.search.GlobalSearchScreen
 import com.vfxsal.filemanager.feature.files.storage.StorageBreakdownScreen
+import com.vfxsal.filemanager.feature.files.timeline.TimelineScreen
 import com.vfxsal.filemanager.feature.files.trash.TrashScreen
 import com.vfxsal.filemanager.feature.files.util.decodePath
 import com.vfxsal.filemanager.feature.files.util.encodePath
+import com.vfxsal.filemanager.feature.files.vault.VaultScreen
 
 const val FILES_GRAPH_ROUTE = "files"
 private const val CATEGORY_ROUTE = "files/category/{categoryName}"
@@ -30,6 +32,8 @@ private const val TRASH_ROUTE = "files/trash"
 private const val STORAGE_ROUTE = "files/storage"
 private const val ABOUT_ROUTE = "files/about"
 private const val INSTALLED_APPS_ROUTE = "files/apps"
+private const val VAULT_ROUTE = "files/vault"
+private const val TIMELINE_ROUTE = "files/timeline"
 
 fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
     composable(FILES_GRAPH_ROUTE) {
@@ -48,6 +52,23 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
                 onOpenTrash = { navController.navigate(TRASH_ROUTE) },
                 onOpenStorageBreakdown = { navController.navigate(STORAGE_ROUTE) },
                 onOpenAbout = { navController.navigate(ABOUT_ROUTE) },
+                onOpenVault = { navController.navigate(VAULT_ROUTE) },
+                onOpenTimeline = { navController.navigate(TIMELINE_ROUTE) },
+            )
+        }
+    }
+
+    composable(VAULT_ROUTE) {
+        FilesPermissionGate {
+            VaultScreen(onBack = { navController.popBackStack() })
+        }
+    }
+
+    composable(TIMELINE_ROUTE) {
+        FilesPermissionGate {
+            TimelineScreen(
+                onBack = { navController.popBackStack() },
+                onEditFile = { path -> navController.navigate("files/edit/${encodePath(path)}") },
             )
         }
     }

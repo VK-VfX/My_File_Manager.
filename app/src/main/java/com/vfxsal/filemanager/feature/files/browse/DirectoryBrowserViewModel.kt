@@ -7,6 +7,7 @@ import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.files.util.ZipOps
+import com.vfxsal.filemanager.feature.files.vault.VaultOps
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -202,6 +203,17 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
                 fetchChildren()
             }
             onResult(success)
+        }
+    }
+
+    fun moveSelectedToVault(onResult: (Int) -> Unit) {
+        val targets = _uiState.value.selectedPaths.map { File(it) }
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            val moved = withContext(Dispatchers.IO) { targets.count { VaultOps.moveIn(context, it) } }
+            clearSelection()
+            fetchChildren()
+            onResult(moved)
         }
     }
 

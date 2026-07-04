@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FolderOff
@@ -67,6 +68,7 @@ fun CleanDashboardScreen(
     onNavigateJunk: () -> Unit,
     onNavigateLarge: () -> Unit,
     onNavigateDuplicates: () -> Unit,
+    onNavigateSimilarPhotos: () -> Unit,
     viewModel: CleanDashboardViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -106,6 +108,7 @@ fun CleanDashboardScreen(
             onNavigateJunk = onNavigateJunk,
             onNavigateLarge = onNavigateLarge,
             onNavigateDuplicates = onNavigateDuplicates,
+            onNavigateSimilarPhotos = onNavigateSimilarPhotos,
         )
     }
 }
@@ -116,6 +119,7 @@ private fun DashboardContent(
     onNavigateJunk: () -> Unit,
     onNavigateLarge: () -> Unit,
     onNavigateDuplicates: () -> Unit,
+    onNavigateSimilarPhotos: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -157,6 +161,16 @@ private fun DashboardContent(
                 icon = Icons.Filled.ContentCopy,
                 iconTint = MaterialTheme.colorScheme.primary,
                 onClick = onNavigateDuplicates,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+        item {
+            CleanCategoryCard(
+                title = "Similar Photos",
+                subtitle = "Find near-duplicate photos",
+                icon = Icons.Filled.Collections,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                onClick = onNavigateSimilarPhotos,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
         }

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -129,6 +130,13 @@ fun CategoryListScreen(
                         scope.launch { snackbarHostState.showSnackbar("Ready to move - open the destination folder and paste") }
                     }) {
                         Icon(Icons.Filled.ContentCut, contentDescription = "Move")
+                    }
+                    IconButton(onClick = {
+                        viewModel.moveSelectedToVault { count ->
+                            scope.launch { snackbarHostState.showSnackbar("Moved $count item(s) to the vault") }
+                        }
+                    }) {
+                        Icon(Icons.Filled.Lock, contentDescription = "Move to vault")
                     }
                     IconButton(onClick = { showDeleteSelectedDialog = true }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete")

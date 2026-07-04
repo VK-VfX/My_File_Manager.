@@ -57,6 +57,12 @@ object WallpaperRenderer {
             WallpaperStyle.ORBIT_RINGS -> drawOrbitRings(canvas, w, h, accentA, rng)
             WallpaperStyle.MOUNTAIN_SKYLINE -> drawMountainSkyline(canvas, w, h, accentA, rng)
             WallpaperStyle.CROSSHAIR_BURST -> drawCrosshairBurst(canvas, w, h, accentA)
+            WallpaperStyle.NEBULA_CLOUD -> drawNebulaCloud(canvas, w, h, accentA, accentB, rng)
+            WallpaperStyle.STARFIELD_DRIFT -> drawStarfieldDrift(canvas, w, h, accentA, rng)
+            WallpaperStyle.CIRCUIT_LINES -> drawCircuitLines(canvas, w, h, accentA, rng)
+            WallpaperStyle.DIAGONAL_STRIPES -> drawDiagonalStripes(canvas, w, h, accentA)
+            WallpaperStyle.HONEYCOMB -> drawHoneycomb(canvas, w, h, accentA)
+            WallpaperStyle.METEOR_SHOWER -> drawMeteorShower(canvas, w, h, accentA, rng)
         }
         return bitmap
     }
@@ -383,6 +389,135 @@ object WallpaperRenderer {
         corePaint.color = colorWithAlpha(accentColor, 255)
         corePaint.maskFilter = BlurMaskFilter(maxRadius * 0.08f, BlurMaskFilter.Blur.NORMAL)
         canvas.drawCircle(cx, cy, maxRadius * 0.05f, corePaint)
+    }
+
+    private fun drawNebulaCloud(canvas: Canvas, w: Int, h: Int, accentA: Int, accentB: Int, rng: Random) {
+        repeat(5) { index ->
+            val cx = rng.nextFloat() * w
+            val cy = rng.nextFloat() * h * 0.8f
+            val radius = min(w, h) * (0.2f + rng.nextFloat() * 0.25f)
+            val cloudColor = if (index % 2 == 0) accentA else accentB
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.shader = RadialGradient(
+                cx, cy, radius,
+                intArrayOf(colorWithAlpha(cloudColor, 90), colorWithAlpha(cloudColor, 30), colorWithAlpha(cloudColor, 0)),
+                floatArrayOf(0f, 0.6f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+            canvas.drawCircle(cx, cy, radius, paint)
+        }
+    }
+
+    private fun drawStarfieldDrift(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
+        repeat(160) {
+            val x = rng.nextFloat() * w
+            val y = rng.nextFloat() * h
+            val isBright = rng.nextFloat() > 0.92f
+            val radius = if (isBright) min(w, h) * (0.006f + rng.nextFloat() * 0.006f) else min(w, h) * 0.0015f
+            val alpha = if (isBright) 255 else (rng.nextFloat() * 150 + 60).toInt().coerceIn(0, 255)
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color = colorWithAlpha(accentColor, alpha)
+            if (isBright) paint.maskFilter = BlurMaskFilter(radius * 2.5f, BlurMaskFilter.Blur.NORMAL)
+            canvas.drawCircle(x, y, radius, paint)
+        }
+    }
+
+    private fun drawCircuitLines(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        linePaint.color = colorWithAlpha(accentColor, 140)
+        linePaint.style = Paint.Style.STROKE
+        linePaint.strokeWidth = min(w, h) * 0.003f
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        dotPaint.color = colorWithAlpha(accentColor, 220)
+
+        var x = rng.nextFloat() * w
+        var y = rng.nextFloat() * h
+        canvas.drawCircle(x, y, min(w, h) * 0.006f, dotPaint)
+        repeat(9) {
+            val nextX = rng.nextFloat() * w
+            val nextY = rng.nextFloat() * h
+            canvas.drawLine(x, y, nextX, y, linePaint)
+            canvas.drawLine(nextX, y, nextX, nextY, linePaint)
+            canvas.drawCircle(nextX, nextY, min(w, h) * 0.006f, dotPaint)
+            x = nextX
+            y = nextY
+        }
+    }
+
+    private fun drawDiagonalStripes(canvas: Canvas, w: Int, h: Int, accentColor: Int) {
+        val stripeCount = 7
+        val spacing = (w + h).toFloat() / stripeCount
+        for (i in 0 until stripeCount) {
+            val offset = i * spacing
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            paint.color = colorWithAlpha(accentColor, (180 - i * 18).coerceAtLeast(25))
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = spacing * 0.25f
+            paint.maskFilter = BlurMaskFilter(spacing * 0.08f, BlurMaskFilter.Blur.NORMAL)
+            canvas.drawLine(offset - h, h.toFloat(), offset, 0f, paint)
+        }
+    }
+
+    private fun drawHoneycomb(canvas: Canvas, w: Int, h: Int, accentColor: Int) {
+        val hexRadius = min(w, h) * 0.09f
+        val hexHeight = hexRadius * 1.732f
+        val cols = (w / (hexRadius * 1.5f)).toInt() + 2
+        val rows = (h / hexHeight).toInt() + 2
+        val focusX = w * 0.7f
+        val focusY = h * 0.3f
+        val maxDist = min(w, h) * 0.9f
+        for (row in 0 until rows) {
+            for (col in 0 until cols) {
+                val cx = col * hexRadius * 1.5f
+                val cy = row * hexHeight + if (col % 2 == 1) hexHeight / 2f else 0f
+                val dx = cx - focusX
+                val dy = cy - focusY
+                val dist = sqrt(dx * dx + dy * dy)
+                val alpha = (120 * (1f - (dist / maxDist)).coerceIn(0f, 1f)).toInt()
+                if (alpha <= 4) continue
+                val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+                paint.color = colorWithAlpha(accentColor, alpha)
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = hexRadius * 0.04f
+                val path = Path()
+                for (i in 0 until 6) {
+                    val angle = Math.toRadians((60 * i).toDouble())
+                    val x = cx + hexRadius * cos(angle).toFloat()
+                    val y = cy + hexRadius * sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                path.close()
+                canvas.drawPath(path, paint)
+            }
+        }
+    }
+
+    private fun drawMeteorShower(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
+        repeat(8) {
+            val startX = rng.nextFloat() * w
+            val startY = rng.nextFloat() * h * 0.6f
+            val length = min(w, h) * (0.15f + rng.nextFloat() * 0.2f)
+            val angle = Math.toRadians(35.0)
+            val endX = startX + (length * cos(angle)).toFloat()
+            val endY = startY + (length * sin(angle)).toFloat()
+
+            val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            trailPaint.shader = LinearGradient(
+                startX, startY, endX, endY,
+                intArrayOf(colorWithAlpha(accentColor, 0), colorWithAlpha(accentColor, 220)),
+                floatArrayOf(0f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+            trailPaint.style = Paint.Style.STROKE
+            trailPaint.strokeWidth = min(w, h) * 0.004f
+            trailPaint.strokeCap = Paint.Cap.ROUND
+            canvas.drawLine(startX, startY, endX, endY, trailPaint)
+
+            val headPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            headPaint.color = colorWithAlpha(accentColor, 255)
+            headPaint.maskFilter = BlurMaskFilter(min(w, h) * 0.015f, BlurMaskFilter.Blur.NORMAL)
+            canvas.drawCircle(endX, endY, min(w, h) * 0.006f, headPaint)
+        }
     }
 
     private fun colorWithAlpha(baseColor: Int, alpha: Int): Int =

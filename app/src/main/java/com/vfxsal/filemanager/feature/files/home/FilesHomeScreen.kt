@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.*
@@ -56,6 +58,8 @@ fun FilesHomeScreen(
     onOpenTrash: () -> Unit,
     onOpenStorageBreakdown: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenVault: () -> Unit,
+    onOpenTimeline: () -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -113,6 +117,14 @@ fun FilesHomeScreen(
                         InternalStorageRow(
                             onClick = { onOpenDirectory(Environment.getExternalStorageDirectory().absolutePath) },
                         )
+                    }
+
+                    item {
+                        TimelineRow(onClick = onOpenTimeline)
+                    }
+
+                    item {
+                        VaultRow(onClick = onOpenVault)
                     }
 
                     item {
@@ -274,6 +286,52 @@ private fun InternalStorageRow(onClick: () -> Unit) {
                 Text("Internal Storage", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = "Browse all files",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun TimelineRow(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Timeline", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = "Browse your photos and videos by date",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun VaultRow(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Secure Vault", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = "PIN-protected private space for your files",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

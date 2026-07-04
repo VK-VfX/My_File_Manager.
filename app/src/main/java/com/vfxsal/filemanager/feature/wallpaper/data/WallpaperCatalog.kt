@@ -116,5 +116,41 @@ object WallpaperCatalog {
         WallpaperDesign("burst_violet", "Violet Burst", WallpaperStyle.CROSSHAIR_BURST, violet, seed = 53L),
         WallpaperDesign("burst_lime", "Lime Burst", WallpaperStyle.CROSSHAIR_BURST, lime, seed = 54L),
         WallpaperDesign("burst_sky", "Sky Burst", WallpaperStyle.CROSSHAIR_BURST, skyLight, seed = 55L),
+
+        // Nebula cloud
+        WallpaperDesign("nebula_violet", "Violet Nebula", WallpaperStyle.NEBULA_CLOUD, violet, magenta, seed = 56L),
+        WallpaperDesign("nebula_ocean", "Ocean Nebula", WallpaperStyle.NEBULA_CLOUD, skyBlue, cyanBright, seed = 57L),
+        WallpaperDesign("nebula_ember", "Ember Nebula", WallpaperStyle.NEBULA_CLOUD, ember, crimson, seed = 58L),
+        WallpaperDesign("nebula_emerald", "Emerald Nebula", WallpaperStyle.NEBULA_CLOUD, emerald, teal, seed = 59L),
+
+        // Starfield drift
+        WallpaperDesign("starfield_ice", "Ice Starfield", WallpaperStyle.STARFIELD_DRIFT, ice, seed = 60L),
+        WallpaperDesign("starfield_gold", "Gold Starfield", WallpaperStyle.STARFIELD_DRIFT, gold, seed = 61L),
+        WallpaperDesign("starfield_rose", "Rose Starfield", WallpaperStyle.STARFIELD_DRIFT, rose, seed = 62L),
+        WallpaperDesign("starfield_mint", "Mint Starfield", WallpaperStyle.STARFIELD_DRIFT, mint, seed = 63L),
+
+        // Circuit lines
+        WallpaperDesign("circuit_lime", "Lime Circuit", WallpaperStyle.CIRCUIT_LINES, lime, seed = 64L),
+        WallpaperDesign("circuit_cyan", "Cyan Circuit", WallpaperStyle.CIRCUIT_LINES, cyan, seed = 65L),
+        WallpaperDesign("circuit_amber", "Amber Circuit", WallpaperStyle.CIRCUIT_LINES, amber, seed = 66L),
+        WallpaperDesign("circuit_magenta", "Magenta Circuit", WallpaperStyle.CIRCUIT_LINES, magenta, seed = 67L),
+
+        // Diagonal stripes
+        WallpaperDesign("stripes_azure", "Azure Stripes", WallpaperStyle.DIAGONAL_STRIPES, azure, seed = 68L),
+        WallpaperDesign("stripes_coral", "Coral Stripes", WallpaperStyle.DIAGONAL_STRIPES, coral, seed = 69L),
+        WallpaperDesign("stripes_indigo", "Indigo Stripes", WallpaperStyle.DIAGONAL_STRIPES, indigo, seed = 70L),
+        WallpaperDesign("stripes_lime", "Lime Stripes", WallpaperStyle.DIAGONAL_STRIPES, lime, seed = 71L),
+
+        // Honeycomb
+        WallpaperDesign("honeycomb_gold", "Gold Honeycomb", WallpaperStyle.HONEYCOMB, gold, seed = 72L),
+        WallpaperDesign("honeycomb_teal", "Teal Honeycomb", WallpaperStyle.HONEYCOMB, teal, seed = 73L),
+        WallpaperDesign("honeycomb_violet", "Violet Honeycomb", WallpaperStyle.HONEYCOMB, violet, seed = 74L),
+        WallpaperDesign("honeycomb_rose", "Rose Honeycomb", WallpaperStyle.HONEYCOMB, rose, seed = 75L),
+
+        // Meteor shower
+        WallpaperDesign("meteor_azure", "Azure Meteors", WallpaperStyle.METEOR_SHOWER, azure, seed = 76L),
+        WallpaperDesign("meteor_ember", "Ember Meteors", WallpaperStyle.METEOR_SHOWER, ember, seed = 77L),
+        WallpaperDesign("meteor_emerald", "Emerald Meteors", WallpaperStyle.METEOR_SHOWER, emerald, seed = 78L),
+        WallpaperDesign("meteor_magenta", "Magenta Meteors", WallpaperStyle.METEOR_SHOWER, magenta, seed = 79L),
     )
 }

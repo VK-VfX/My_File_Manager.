@@ -30,6 +30,11 @@ data class DuplicateGroup(
     val wastedBytes: Long get() = sizeBytes * (files.size - 1).coerceAtLeast(0)
 }
 
+data class SimilarPhotoGroup(val files: List<FileEntry>) {
+    val id: String get() = files.first().path
+    val totalBytes: Long get() = files.sumOf { it.sizeBytes }
+}
+
 data class LargeFileThreshold(val bytes: Long, val label: String)
 
 val LARGE_FILE_THRESHOLDS = listOf(

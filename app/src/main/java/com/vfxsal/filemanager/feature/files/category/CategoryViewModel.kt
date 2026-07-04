@@ -8,6 +8,7 @@ import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.files.vault.VaultOps
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +90,17 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
             clearSelection()
             loadedCategory?.let { fetch(it) }
             onResult(deleted)
+        }
+    }
+
+    fun moveSelectedToVault(onResult: (Int) -> Unit) {
+        val targets = _uiState.value.selectedPaths.map { File(it) }
+        val context = getApplication<Application>()
+        viewModelScope.launch {
+            val moved = withContext(Dispatchers.IO) { targets.count { VaultOps.moveIn(context, it) } }
+            clearSelection()
+            loadedCategory?.let { fetch(it) }
+            onResult(moved)
         }
     }
 }

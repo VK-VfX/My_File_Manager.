@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
@@ -176,6 +177,11 @@ fun DirectoryBrowserScreen(
                             scope.launch {
                                 snackbarHostState.showSnackbar(if (success) "Compressed" else "Could not compress")
                             }
+                        }
+                    },
+                    onMoveToVault = {
+                        viewModel.moveSelectedToVault { count ->
+                            scope.launch { snackbarHostState.showSnackbar("Moved $count item(s) to the vault") }
                         }
                     },
                 )
@@ -431,12 +437,14 @@ private fun SelectionActionBar(
     onRename: () -> Unit,
     onShare: () -> Unit,
     onCompress: () -> Unit,
+    onMoveToVault: () -> Unit,
 ) {
     BottomAppBar {
         IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy") }
         IconButton(onClick = onMove) { Icon(Icons.Filled.ContentCut, contentDescription = "Move") }
         IconButton(onClick = onShare) { Icon(Icons.Filled.Share, contentDescription = "Share") }
         IconButton(onClick = onCompress) { Icon(Icons.Filled.FolderZip, contentDescription = "Compress") }
+        IconButton(onClick = onMoveToVault) { Icon(Icons.Filled.Lock, contentDescription = "Move to vault") }
         if (selectionCount == 1) {
             IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = "Rename") }
         }
