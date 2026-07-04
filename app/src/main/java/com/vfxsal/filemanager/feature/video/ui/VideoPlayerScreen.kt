@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward10
@@ -49,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -362,24 +364,32 @@ private fun BottomControlBar(
                     tint = if (hasNext) Color.White else Color.White.copy(alpha = 0.3f),
                 )
             }
+            SpeedControl(playbackSpeed = playbackSpeed, onClick = onCycleSpeed)
         }
+    }
+}
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onCycleSpeed) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Speed, contentDescription = "Playback speed", tint = Color.White)
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "${if (playbackSpeed == playbackSpeed.toInt().toFloat()) playbackSpeed.toInt().toString() else playbackSpeed.toString()}x",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
-        }
+@Composable
+private fun SpeedControl(playbackSpeed: Float, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.15f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Speed,
+            contentDescription = "Playback speed",
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(2.dp))
+        Text(
+            text = "${if (playbackSpeed == playbackSpeed.toInt().toFloat()) playbackSpeed.toInt().toString() else playbackSpeed.toString()}x",
+            color = Color.White,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }

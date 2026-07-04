@@ -89,6 +89,8 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
         arguments = listOf(navArgument("categoryName") { type = NavType.StringType }),
     ) { backStackEntry ->
         val categoryName = backStackEntry.arguments?.getString("categoryName") ?: FileCategory.OTHER.name
+        val filesGraphEntry = remember(backStackEntry) { navController.getBackStackEntry(FILES_GRAPH_ROUTE) }
+        val clipboardViewModel: ClipboardViewModel = viewModel(filesGraphEntry)
         FilesPermissionGate {
             CategoryListScreen(
                 categoryName = categoryName,
@@ -96,6 +98,7 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController) {
                 onEditFile = { path ->
                     navController.navigate("files/edit/${encodePath(path)}")
                 },
+                clipboardViewModel = clipboardViewModel,
                 onOpenInstalledApps = { navController.navigate(INSTALLED_APPS_ROUTE) },
             )
         }
