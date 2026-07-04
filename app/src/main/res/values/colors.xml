@@ -2,4 +2,12 @@
 <resources>
     <color name="window_background">#FFFBFE</color>
     <color name="ic_launcher_background">#F7FDFD</color>
+
+    <!-- Home screen widget: fixed AMOLED-dark palette matching the in-app theme,
+         regardless of system light/dark mode, so the widget always reads as WhatFiles?. -->
+    <color name="widget_background">#0F0F13</color>
+    <color name="widget_on_background">#E7E6EA</color>
+    <color name="widget_on_background_variant">#C9C7D1</color>
+    <color name="widget_track">#201F26</color>
+    <color name="widget_accent">#3B5FE0</color>
 </resources>

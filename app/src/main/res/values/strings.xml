@@ -9,4 +9,7 @@
     <string name="nav_wallpapers">Wallpapers</string>
 
     <string name="notification_channel_playback">Music playback</string>
+
+    <string name="widget_storage_title">Storage</string>
+    <string name="widget_storage_description">Shows free vs. used storage at a glance</string>
 </resources>

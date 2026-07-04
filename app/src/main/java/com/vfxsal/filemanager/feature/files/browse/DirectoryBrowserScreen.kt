@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
@@ -52,14 +53,17 @@ import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.ClipboardMode
 import com.vfxsal.filemanager.feature.files.ClipboardViewModel
 import com.vfxsal.filemanager.feature.files.PasteResult
+import com.vfxsal.filemanager.feature.files.components.BatchRenameDialog
 import com.vfxsal.filemanager.feature.files.components.BreadcrumbBar
 import com.vfxsal.filemanager.feature.files.components.DeleteConfirmDialog
 import com.vfxsal.filemanager.feature.files.components.EmptyState
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.FileListItem
+import com.vfxsal.filemanager.feature.files.components.TagPickerDialog
 import com.vfxsal.filemanager.feature.files.components.TextInputDialog
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.components.validateFileName
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import java.io.File
@@ -88,6 +92,8 @@ fun DirectoryBrowserScreen(
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<FileEntry?>(null) }
+    var showBatchRenameDialog by remember { mutableStateOf(false) }
+    var showTagDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
 
     BackHandler(enabled = uiState.selectionMode || uiState.searchActive) {
@@ -165,7 +171,13 @@ fun DirectoryBrowserScreen(
                         viewModel.clearSelection()
                     },
                     onDelete = { showDeleteSelectedDialog = true },
-                    onRename = { renameTarget = viewModel.selectedEntries().firstOrNull() },
+                    onRename = {
+                        if (uiState.selectedPaths.size == 1) {
+                            renameTarget = viewModel.selectedEntries().firstOrNull()
+                        } else {
+                            showBatchRenameDialog = true
+                        }
+                    },
                     onShare = {
                         val files = viewModel.selectedEntries().filterNot { it.isDirectory }.map { it.file }
                         if (!FileOps.tryShare(context, files)) {
@@ -184,6 +196,7 @@ fun DirectoryBrowserScreen(
                             scope.launch { snackbarHostState.showSnackbar("Moved $count item(s) to the vault") }
                         }
                     },
+                    onTag = { showTagDialog = true },
                 )
             }
         },
@@ -296,6 +309,32 @@ fun DirectoryBrowserScreen(
             },
         )
     }
+
+    if (showBatchRenameDialog) {
+        BatchRenameDialog(
+            count = uiState.selectedPaths.size,
+            onDismiss = { showBatchRenameDialog = false },
+            onConfirm = { baseName, pattern ->
+                showBatchRenameDialog = false
+                viewModel.renameSelected(baseName, pattern) { count ->
+                    scope.launch { snackbarHostState.showSnackbar("Renamed $count item(s)") }
+                }
+            },
+        )
+    }
+
+    if (showTagDialog) {
+        TagPickerDialog(
+            count = uiState.selectedPaths.size,
+            currentTag = null,
+            onDismiss = { showTagDialog = false },
+            onSelect = { tag ->
+                FileTagsStore.setTag(context, uiState.selectedPaths, tag)
+                showTagDialog = false
+                viewModel.clearSelection()
+            },
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -372,6 +411,7 @@ private fun BrowserTopBar(
                         SortOptionItem("Name", SortBy.NAME, uiState.sortBy, uiState.ascending, onSortSelect)
                         SortOptionItem("Size", SortBy.SIZE, uiState.sortBy, uiState.ascending, onSortSelect)
                         SortOptionItem("Date modified", SortBy.DATE, uiState.sortBy, uiState.ascending, onSortSelect)
+                        SortOptionItem("File type", SortBy.TYPE, uiState.sortBy, uiState.ascending, onSortSelect)
                     }
                 }
             },
@@ -438,6 +478,7 @@ private fun SelectionActionBar(
     onShare: () -> Unit,
     onCompress: () -> Unit,
     onMoveToVault: () -> Unit,
+    onTag: () -> Unit,
 ) {
     BottomAppBar {
         IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy") }
@@ -445,9 +486,8 @@ private fun SelectionActionBar(
         IconButton(onClick = onShare) { Icon(Icons.Filled.Share, contentDescription = "Share") }
         IconButton(onClick = onCompress) { Icon(Icons.Filled.FolderZip, contentDescription = "Compress") }
         IconButton(onClick = onMoveToVault) { Icon(Icons.Filled.Lock, contentDescription = "Move to vault") }
-        if (selectionCount == 1) {
-            IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = "Rename") }
-        }
+        IconButton(onClick = onTag) { Icon(Icons.Filled.Label, contentDescription = "Tag") }
+        IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = "Rename") }
         IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
     }
 }

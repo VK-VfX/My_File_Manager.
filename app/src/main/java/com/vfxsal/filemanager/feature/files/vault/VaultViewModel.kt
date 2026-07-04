@@ -1,8 +1,10 @@
 package com.vfxsal.filemanager.feature.files.vault
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vfxsal.filemanager.feature.files.util.BackupOps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,6 +71,17 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val success = withContext(Dispatchers.IO) { VaultOps.deleteForever(getApplication<Application>(), entry) }
             if (success) load()
+            onResult(success)
+        }
+    }
+
+    fun backup(treeUri: Uri, onResult: (Boolean) -> Unit) {
+        val context = getApplication<Application>()
+        val sources = _uiState.value.entries.map { it.vaultedFile(context) }
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                BackupOps.backupToTree(context, treeUri, sources, "VaultBackup")
+            }
             onResult(success)
         }
     }

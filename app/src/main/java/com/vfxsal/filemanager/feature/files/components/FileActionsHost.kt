@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.files.util.ZipOps
@@ -30,6 +31,8 @@ class FileActionsState {
     var renameEntry: FileEntry? by mutableStateOf(null)
         private set
     var deleteEntry: FileEntry? by mutableStateOf(null)
+        private set
+    var tagEntry: FileEntry? by mutableStateOf(null)
         private set
 
     fun showDetails(entry: FileEntry) {
@@ -56,6 +59,15 @@ class FileActionsState {
 
     fun dismissDelete() {
         deleteEntry = null
+    }
+
+    fun requestTag(entry: FileEntry) {
+        detailsEntry = null
+        tagEntry = entry
+    }
+
+    fun dismissTag() {
+        tagEntry = null
     }
 }
 
@@ -90,6 +102,7 @@ fun FileActionsHost(
             },
             onRename = { state.requestRename(entry) },
             onDelete = { state.requestDelete(entry) },
+            onTag = { state.requestTag(entry) },
             onExtract = if (entry.extension.lowercase() == "zip") {
                 {
                     state.dismissDetails()
@@ -142,6 +155,19 @@ fun FileActionsHost(
                     withContext(Dispatchers.IO) { TrashOps.moveToTrash(context, entry.file) }
                     onChanged()
                 }
+            },
+        )
+    }
+
+    state.tagEntry?.let { entry ->
+        TagPickerDialog(
+            count = 1,
+            currentTag = FileTagsStore.getTag(context, entry.path),
+            onDismiss = { state.dismissTag() },
+            onSelect = { tag ->
+                FileTagsStore.setTag(context, entry.path, tag)
+                state.dismissTag()
+                onChanged()
             },
         )
     }

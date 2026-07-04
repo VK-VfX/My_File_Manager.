@@ -1,5 +1,8 @@
 package com.vfxsal.filemanager.feature.files.vault
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RestoreFromTrash
@@ -84,6 +88,7 @@ fun VaultScreen(
             onLock = { viewModel.lock() },
             onRestore = { entry, onResult -> viewModel.restore(entry, onResult) },
             onDeleteForever = { entry, onResult -> viewModel.deleteForever(entry, onResult) },
+            onBackup = { treeUri, onResult -> viewModel.backup(treeUri, onResult) },
         )
     }
 }
@@ -190,10 +195,18 @@ private fun VaultContentScreen(
     onLock: () -> Unit,
     onRestore: (VaultOps.VaultEntry, (Boolean) -> Unit) -> Unit,
     onDeleteForever: (VaultOps.VaultEntry, (Boolean) -> Unit) -> Unit,
+    onBackup: (Uri, (Boolean) -> Unit) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val thumbnailLoader = rememberMediaThumbnailLoader()
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
+        if (treeUri != null) {
+            onBackup(treeUri) { success ->
+                scope.launch { snackbarHostState.showSnackbar(if (success) "Backup saved" else "Backup failed") }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -205,6 +218,12 @@ private fun VaultContentScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { backupLauncher.launch(null) },
+                        enabled = uiState.entries.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Filled.Backup, contentDescription = "Backup vault")
+                    }
                     IconButton(onClick = onLock) {
                         Icon(Icons.Filled.Lock, contentDescription = "Lock vault")
                     }

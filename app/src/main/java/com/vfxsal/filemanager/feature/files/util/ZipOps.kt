@@ -3,6 +3,7 @@ package com.vfxsal.filemanager.feature.files.util
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -15,12 +16,20 @@ import java.util.zip.ZipOutputStream
 object ZipOps {
 
     fun zip(sources: List<File>, destZip: File): Boolean = try {
-        ZipOutputStream(FileOutputStream(destZip).buffered()).use { zos ->
+        FileOutputStream(destZip).use { zip(sources, it) }
+    } catch (e: Exception) {
+        destZip.delete()
+        false
+    }
+
+    /** Same as [zip] but writes to an already-open stream, e.g. one opened via
+     *  `ContentResolver.openOutputStream` for a SAF-picked destination. */
+    fun zip(sources: List<File>, destStream: OutputStream): Boolean = try {
+        ZipOutputStream(destStream.buffered()).use { zos ->
             sources.forEach { source -> addToZip(zos, source, source.name) }
         }
         true
     } catch (e: Exception) {
-        destZip.delete()
         false
     }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.StorageStatsUtils
 import java.io.File
@@ -23,6 +24,11 @@ data class CategorySummary(
     val totalBytes: Long,
 )
 
+data class HomeSuggestion(
+    val message: String,
+    val category: FileCategory,
+)
+
 data class FilesHomeUiState(
     val isLoading: Boolean = true,
     val storageStats: StorageStats? = null,
@@ -30,7 +36,12 @@ data class FilesHomeUiState(
     val recentFiles: List<FileEntry> = emptyList(),
     val downloadsCount: Int = 0,
     val downloadsBytes: Long = 0,
+    val suggestions: List<HomeSuggestion> = emptyList(),
 )
+
+private const val WEEK_MILLIS = 7L * 24 * 60 * 60 * 1000
+private const val SCREENSHOT_BUILDUP_THRESHOLD = 3
+private const val ACTIVE_CATEGORY_THRESHOLD = 3
 
 class FilesHomeViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -75,6 +86,39 @@ class FilesHomeViewModel(application: Application) : AndroidViewModel(applicatio
             recentFiles = recent,
             downloadsCount = downloadFiles.size,
             downloadsBytes = downloadFiles.sumOf { it.sizeBytes },
+            suggestions = buildSuggestions(allFiles),
         )
+    }
+
+    /** Surfaces quick-action nudges from data already computed for the home screen, e.g.
+     *  a buildup of screenshots or a category that's seen unusually heavy activity lately. */
+    private fun buildSuggestions(allFiles: List<FileEntry>): List<HomeSuggestion> {
+        val weekAgo = System.currentTimeMillis() - WEEK_MILLIS
+        val recentFiles = allFiles.filter { it.lastModified >= weekAgo }
+        val suggestions = mutableListOf<HomeSuggestion>()
+
+        val screenshotCount = recentFiles.count {
+            it.category == FileCategory.IMAGES && it.name.contains("screenshot", ignoreCase = true)
+        }
+        if (screenshotCount >= SCREENSHOT_BUILDUP_THRESHOLD) {
+            suggestions += HomeSuggestion(
+                message = "$screenshotCount screenshots added this week - clean them up?",
+                category = FileCategory.IMAGES,
+            )
+        }
+
+        val busiest = recentFiles
+            .filter { it.category != FileCategory.OTHER && it.category != FileCategory.FOLDER }
+            .groupBy { it.category }
+            .maxByOrNull { (_, files) -> files.size }
+        if (busiest != null && busiest.value.size >= ACTIVE_CATEGORY_THRESHOLD) {
+            val (category, files) = busiest
+            suggestions += HomeSuggestion(
+                message = "${files.size} ${categoryLabel(category).lowercase()} added this week (${FormatUtils.formatFileSize(files.sumOf { it.sizeBytes })})",
+                category = category,
+            )
+        }
+
+        return suggestions.take(2)
     }
 }

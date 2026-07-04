@@ -1,11 +1,13 @@
 package com.vfxsal.filemanager.feature.files.timeline
 
 import android.app.Application
+import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.util.BackupOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -38,6 +40,17 @@ class TimelineViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(isLoading = true) }
             val state = withContext(Dispatchers.IO) { computeState() }
             _uiState.update { state }
+        }
+    }
+
+    fun backup(treeUri: Uri, onResult: (Boolean) -> Unit) {
+        val context = getApplication<Application>()
+        val sources = _uiState.value.monthGroups.flatMap { it.entries }.distinctBy { it.path }.map { it.file }
+        viewModelScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                BackupOps.backupToTree(context, treeUri, sources, "TimelineBackup")
+            }
+            onResult(success)
         }
     }
 

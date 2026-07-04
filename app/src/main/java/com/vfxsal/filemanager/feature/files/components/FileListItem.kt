@@ -2,8 +2,10 @@ package com.vfxsal.filemanager.feature.files.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -16,11 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
 
@@ -46,6 +50,8 @@ fun FileListItem(
             Checkbox(checked = selected, onCheckedChange = { onClick() })
             Spacer(Modifier.width(4.dp))
         }
+        val context = LocalContext.current
+        val tag = FileTagsStore.getTag(context, entry.path)
         val showsThumbnail = !entry.isDirectory &&
             (entry.category == FileCategory.IMAGES || entry.category == FileCategory.VIDEOS)
         if (showsThumbnail) {
@@ -80,6 +86,9 @@ fun FileListItem(
                         )
                     }
                 }
+                if (tag != null) {
+                    TagDot(color = tag.color, modifier = Modifier.align(Alignment.BottomEnd))
+                }
             }
         } else {
             Box(
@@ -90,6 +99,9 @@ fun FileListItem(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(imageVector = entry.category.icon, contentDescription = null, tint = entry.category.color())
+                if (tag != null) {
+                    TagDot(color = tag.color, modifier = Modifier.align(Alignment.BottomEnd))
+                }
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -124,4 +136,15 @@ fun FileListItem(
             )
         }
     }
+}
+
+@Composable
+private fun TagDot(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(12.dp)
+            .clip(CircleShape)
+            .background(color)
+            .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+    )
 }

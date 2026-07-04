@@ -6,8 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.feature.files.browse.SortBy
+import com.vfxsal.filemanager.feature.files.browse.buildFileEntryComparator
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
+import com.vfxsal.filemanager.feature.files.util.BatchRenameOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.files.util.RenamePattern
 import com.vfxsal.filemanager.feature.files.vault.VaultOps
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +26,8 @@ data class CategoryUiState(
     val category: FileCategory = FileCategory.OTHER,
     val isLoading: Boolean = true,
     val entries: List<FileEntry> = emptyList(),
+    val sortBy: SortBy = SortBy.DATE,
+    val ascending: Boolean = false,
     val selectionMode: Boolean = false,
     val selectedPaths: Set<String> = emptySet(),
 )
@@ -32,6 +38,7 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
     val uiState: StateFlow<CategoryUiState> = _uiState.asStateFlow()
 
     private var loadedCategory: FileCategory? = null
+    private var rawEntries: List<FileEntry> = emptyList()
 
     fun load(category: FileCategory) {
         if (loadedCategory == category) return
@@ -43,15 +50,30 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
         loadedCategory?.let { fetch(it) }
     }
 
-    private fun fetch(category: FileCategory) {
-        viewModelScope.launch {
-            _uiState.value = CategoryUiState(category = category, isLoading = true)
-            val entries = withContext(Dispatchers.IO) {
-                FileOps.filesByCategory(Environment.getExternalStorageDirectory(), category)
-                    .sortedByDescending { it.lastModified }
-            }
-            _uiState.value = CategoryUiState(category = category, isLoading = false, entries = entries)
+    fun setSortBy(sortBy: SortBy) {
+        _uiState.update {
+            if (it.sortBy == sortBy) it.copy(ascending = !it.ascending) else it.copy(sortBy = sortBy, ascending = true)
         }
+        recompute()
+    }
+
+    private fun fetch(category: FileCategory) {
+        val sortBy = _uiState.value.sortBy
+        val ascending = _uiState.value.ascending
+        viewModelScope.launch {
+            _uiState.value = CategoryUiState(category = category, isLoading = true, sortBy = sortBy, ascending = ascending)
+            rawEntries = withContext(Dispatchers.IO) {
+                FileOps.filesByCategory(Environment.getExternalStorageDirectory(), category)
+            }
+            _uiState.update { it.copy(isLoading = false) }
+            recompute()
+        }
+    }
+
+    private fun recompute() {
+        val state = _uiState.value
+        val sorted = rawEntries.sortedWith(buildFileEntryComparator(state.sortBy, state.ascending))
+        _uiState.update { it.copy(entries = sorted) }
     }
 
     fun enterSelectionMode(path: String) {
@@ -90,6 +112,18 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
             clearSelection()
             loadedCategory?.let { fetch(it) }
             onResult(deleted)
+        }
+    }
+
+    fun renameSelected(baseName: String, pattern: RenamePattern, onResult: (Int) -> Unit) {
+        val entries = _uiState.value.entries.filter { it.path in _uiState.value.selectedPaths }
+        viewModelScope.launch {
+            val renamed = withContext(Dispatchers.IO) {
+                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern)
+            }
+            clearSelection()
+            if (renamed > 0) loadedCategory?.let { fetch(it) }
+            onResult(renamed)
         }
     }
 

@@ -21,9 +21,14 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,12 +45,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.feature.files.ClipboardViewModel
+import com.vfxsal.filemanager.feature.files.browse.SortBy
+import com.vfxsal.filemanager.feature.files.components.BatchRenameDialog
 import com.vfxsal.filemanager.feature.files.components.DeleteConfirmDialog
 import com.vfxsal.filemanager.feature.files.components.EmptyState
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.FileListItem
+import com.vfxsal.filemanager.feature.files.components.TagPickerDialog
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.home.categoryLabel
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.FormatUtils
@@ -72,6 +81,9 @@ fun CategoryListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val actionsState = rememberFileActionsState()
     var showDeleteSelectedDialog by remember { mutableStateOf(false) }
+    var showBatchRenameDialog by remember { mutableStateOf(false) }
+    var showTagDialog by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     BackHandler(enabled = uiState.selectionMode) { viewModel.clearSelection() }
 
@@ -103,6 +115,29 @@ fun CategoryListScreen(
                         if (category == FileCategory.APKS) {
                             IconButton(onClick = onOpenInstalledApps) {
                                 Icon(Icons.Filled.Apps, contentDescription = "Installed apps")
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { showSortMenu = true }) {
+                                Icon(Icons.Filled.Sort, contentDescription = "Sort")
+                            }
+                            DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                CategorySortOptionItem("Name", SortBy.NAME, uiState.sortBy, uiState.ascending) {
+                                    viewModel.setSortBy(it)
+                                    showSortMenu = false
+                                }
+                                CategorySortOptionItem("Size", SortBy.SIZE, uiState.sortBy, uiState.ascending) {
+                                    viewModel.setSortBy(it)
+                                    showSortMenu = false
+                                }
+                                CategorySortOptionItem("Date modified", SortBy.DATE, uiState.sortBy, uiState.ascending) {
+                                    viewModel.setSortBy(it)
+                                    showSortMenu = false
+                                }
+                                CategorySortOptionItem("File type", SortBy.TYPE, uiState.sortBy, uiState.ascending) {
+                                    viewModel.setSortBy(it)
+                                    showSortMenu = false
+                                }
                             }
                         }
                     },
@@ -137,6 +172,12 @@ fun CategoryListScreen(
                         }
                     }) {
                         Icon(Icons.Filled.Lock, contentDescription = "Move to vault")
+                    }
+                    IconButton(onClick = { showTagDialog = true }) {
+                        Icon(Icons.Filled.Label, contentDescription = "Tag")
+                    }
+                    IconButton(onClick = { showBatchRenameDialog = true }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Rename")
                     }
                     IconButton(onClick = { showDeleteSelectedDialog = true }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete")
@@ -210,4 +251,52 @@ fun CategoryListScreen(
             },
         )
     }
+
+    if (showBatchRenameDialog) {
+        BatchRenameDialog(
+            count = uiState.selectedPaths.size,
+            onDismiss = { showBatchRenameDialog = false },
+            onConfirm = { baseName, pattern ->
+                showBatchRenameDialog = false
+                viewModel.renameSelected(baseName, pattern) { count ->
+                    scope.launch { snackbarHostState.showSnackbar("Renamed $count item(s)") }
+                }
+            },
+        )
+    }
+
+    if (showTagDialog) {
+        TagPickerDialog(
+            count = uiState.selectedPaths.size,
+            currentTag = null,
+            onDismiss = { showTagDialog = false },
+            onSelect = { tag ->
+                FileTagsStore.setTag(context, uiState.selectedPaths, tag)
+                showTagDialog = false
+                viewModel.clearSelection()
+            },
+        )
+    }
+}
+
+@Composable
+private fun CategorySortOptionItem(
+    label: String,
+    value: SortBy,
+    current: SortBy,
+    ascending: Boolean,
+    onSelect: (SortBy) -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        onClick = { onSelect(value) },
+        trailingIcon = {
+            if (current == value) {
+                Icon(
+                    imageVector = if (ascending) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
+                    contentDescription = null,
+                )
+            }
+        },
+    )
 }

@@ -1,5 +1,7 @@
 package com.vfxsal.filemanager.feature.files.timeline
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -79,6 +82,14 @@ fun TimelineScreen(
         }
     }
 
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { treeUri ->
+        if (treeUri != null) {
+            viewModel.backup(treeUri) { success ->
+                scope.launch { snackbarHostState.showSnackbar(if (success) "Backup saved" else "Backup failed") }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -86,6 +97,14 @@ fun TimelineScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { backupLauncher.launch(null) },
+                        enabled = uiState.monthGroups.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Filled.Backup, contentDescription = "Backup timeline")
                     }
                 },
             )

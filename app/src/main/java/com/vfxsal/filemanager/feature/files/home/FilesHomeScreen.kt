@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storage
@@ -96,6 +97,16 @@ fun FilesHomeScreen(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     item { StorageUsageCard(uiState.storageStats, onClick = onOpenStorageBreakdown) }
+
+                    if (uiState.suggestions.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                uiState.suggestions.forEach { suggestion ->
+                                    SuggestionCard(suggestion = suggestion, onClick = { onOpenCategory(suggestion.category) })
+                                }
+                            }
+                        }
+                    }
 
                     item {
                         Column {
@@ -185,6 +196,33 @@ private fun StorageUsageCard(stats: StorageStats?, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionCard(suggestion: HomeSuggestion, onClick: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(suggestion.category.color().copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Lightbulb, contentDescription = null, tint = suggestion.category.color())
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = suggestion.message,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

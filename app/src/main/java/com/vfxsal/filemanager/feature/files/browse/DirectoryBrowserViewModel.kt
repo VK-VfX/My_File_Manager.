@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
+import com.vfxsal.filemanager.feature.files.util.BatchRenameOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.files.util.RenamePattern
 import com.vfxsal.filemanager.feature.files.util.ZipOps
 import com.vfxsal.filemanager.feature.files.vault.VaultOps
 import java.io.File
@@ -18,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-enum class SortBy { NAME, SIZE, DATE }
+enum class SortBy { NAME, SIZE, DATE, TYPE }
 
 data class DirectoryBrowserUiState(
     val path: String = "",
@@ -146,15 +148,8 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         _uiState.update { it.copy(entries = display) }
     }
 
-    private fun buildComparator(sortBy: SortBy, ascending: Boolean): Comparator<FileEntry> {
-        val base: Comparator<FileEntry> = when (sortBy) {
-            SortBy.NAME -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
-            SortBy.SIZE -> compareBy { it.sizeBytes }
-            SortBy.DATE -> compareBy { it.lastModified }
-        }
-        val directional = if (ascending) base else base.reversed()
-        return compareByDescending<FileEntry> { it.isDirectory }.then(directional)
-    }
+    private fun buildComparator(sortBy: SortBy, ascending: Boolean): Comparator<FileEntry> =
+        buildFileEntryComparator(sortBy, ascending)
 
     fun createFolder(name: String, onResult: (Boolean) -> Unit) {
         val parent = File(_uiState.value.path)
@@ -217,10 +212,36 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
+    fun renameSelected(baseName: String, pattern: RenamePattern, onResult: (Int) -> Unit) {
+        val entries = _uiState.value.entries.filter { it.path in _uiState.value.selectedPaths }
+        viewModelScope.launch {
+            val renamed = withContext(Dispatchers.IO) {
+                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern)
+            }
+            clearSelection()
+            if (renamed > 0) fetchChildren()
+            onResult(renamed)
+        }
+    }
+
     fun selectedEntries(): List<FileEntry> {
         val selected = _uiState.value.selectedPaths
         return rawEntries.filter { selected.contains(it.path) }
     }
 
     fun siblingNames(): Set<String> = rawEntries.map { it.name }.toSet()
+}
+
+/** Shared by [DirectoryBrowserViewModel] and [com.vfxsal.filemanager.feature.files.category.CategoryViewModel]
+ *  so both the directory browser and category screens sort files the same way. */
+fun buildFileEntryComparator(sortBy: SortBy, ascending: Boolean): Comparator<FileEntry> {
+    val base: Comparator<FileEntry> = when (sortBy) {
+        SortBy.NAME -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+        SortBy.SIZE -> compareBy { it.sizeBytes }
+        SortBy.DATE -> compareBy { it.lastModified }
+        SortBy.TYPE -> compareBy<FileEntry> { it.category.ordinal }
+            .thenComparing(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    }
+    val directional = if (ascending) base else base.reversed()
+    return compareByDescending<FileEntry> { it.isDirectory }.then(directional)
 }

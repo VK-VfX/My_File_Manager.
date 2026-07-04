@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.feature.clean.scan.DashboardScanner
+import com.vfxsal.filemanager.feature.widget.StorageWidgetProvider
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.StorageStatsUtils
 import kotlinx.coroutines.CancellationException
@@ -45,6 +46,7 @@ class CleanDashboardViewModel(application: Application) : AndroidViewModel(appli
             try {
                 val stats = StorageStatsUtils.primaryStorageStats()
                 _uiState.update { it.copy(storageStats = stats) }
+                StorageWidgetProvider.updateAllWidgets(getApplication())
 
                 val result = DashboardScanner.scan()
                 _uiState.update {

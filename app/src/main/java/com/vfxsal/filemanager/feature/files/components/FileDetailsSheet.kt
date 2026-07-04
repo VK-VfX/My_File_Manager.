@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -31,6 +32,7 @@ fun FileDetailsSheet(
     onShare: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
+    onTag: () -> Unit,
     onExtract: (() -> Unit)? = null,
 ) {
     val sheetState = rememberModalBottomSheetState()
@@ -85,6 +87,7 @@ fun FileDetailsSheet(
                 DetailActionRow(icon = Icons.Filled.FolderZip, label = "Extract", onClick = onExtract)
             }
             DetailActionRow(icon = Icons.Filled.Edit, label = "Rename", onClick = onRename)
+            DetailActionRow(icon = Icons.Filled.Label, label = "Tag", onClick = onTag)
             DetailActionRow(icon = Icons.Filled.Delete, label = "Delete", onClick = onDelete)
         }
     }
