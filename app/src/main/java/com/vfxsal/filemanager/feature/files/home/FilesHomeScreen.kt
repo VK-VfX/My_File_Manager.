@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -19,12 +20,15 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +46,7 @@ import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.feature.update.UpdateViewModel
 import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
 import com.vfxsal.filemanager.util.StorageStats
@@ -62,14 +67,18 @@ fun FilesHomeScreen(
     onOpenVault: () -> Unit,
     onOpenTimeline: () -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
+    updateViewModel: UpdateViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val actionsState = rememberFileActionsState()
+    var updateBannerDismissed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
+    LaunchedEffect(Unit) { updateViewModel.checkForUpdate(silent = true) }
 
     Scaffold(
         topBar = {
@@ -96,6 +105,17 @@ fun FilesHomeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
+                    val availableUpdate = updateState.available
+                    if (availableUpdate != null && !updateBannerDismissed) {
+                        item {
+                            UpdateBannerCard(
+                                versionName = availableUpdate.versionName,
+                                onClick = onOpenAbout,
+                                onDismiss = { updateBannerDismissed = true },
+                            )
+                        }
+                    }
+
                     item { StorageUsageCard(uiState.storageStats, onClick = onOpenStorageBreakdown) }
 
                     if (uiState.suggestions.isNotEmpty()) {
@@ -194,6 +214,39 @@ private fun StorageUsageCard(stats: StorageStats?, onClick: () -> Unit) {
                     text = "${FormatUtils.formatFileSize(stats.usedBytes)} of ${FormatUtils.formatFileSize(stats.totalBytes)} used",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateBannerCard(versionName: String, onClick: () -> Unit, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.SystemUpdate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "Update available - version $versionName",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }
