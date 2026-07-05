@@ -1,6 +1,7 @@
 package com.vfxsal.filemanager.feature.files.home
 
 import android.os.Environment
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,7 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
@@ -55,6 +60,7 @@ import com.vfxsal.filemanager.ui.components.ShimmerHomeContent
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
 import java.io.File
+import java.util.Calendar
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,11 +94,8 @@ fun FilesHomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Files") },
+                title = { Text("WhatFiles?") },
                 actions = {
-                    IconButton(onClick = onOpenSearch) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search all files")
-                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
@@ -113,6 +116,10 @@ fun FilesHomeScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
+                    item { GreetingHeader() }
+
+                    item { SearchPill(onClick = onOpenSearch) }
+
                     val availableUpdate = updateState.available
                     if (availableUpdate != null && !updateBannerDismissed) {
                         item {
@@ -265,6 +272,90 @@ private fun HomeHeroCarousel(
     }
 }
 
+/** Time-of-day greeting that opens the home screen with some personality. */
+@Composable
+private fun GreetingHeader() {
+    val greeting = remember {
+        when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
+            in 5..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            in 17..21 -> "Good evening"
+            else -> "Good night"
+        }
+    }
+    Column {
+        Text(greeting, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = "Here's what's on your device",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Full-width pill that looks like a search field and opens global search on tap. */
+@Composable
+private fun SearchPill(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Search,
+            contentDescription = "Search your files",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = "Search your files",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Circular used-space gauge: a full track ring with a rounded progress arc over it. */
+@Composable
+private fun StorageDonut(usedFraction: Float, modifier: Modifier = Modifier) {
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val progressColor = MaterialTheme.colorScheme.primary
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val stroke = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
+            val inset = stroke.width / 2
+            val arcSize = Size(size.width - stroke.width, size.height - stroke.width)
+            drawArc(
+                color = trackColor,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = stroke,
+            )
+            drawArc(
+                color = progressColor,
+                startAngle = -90f,
+                sweepAngle = 360f * usedFraction.coerceIn(0f, 1f),
+                useCenter = false,
+                topLeft = Offset(inset, inset),
+                size = arcSize,
+                style = stroke,
+            )
+        }
+        Text(
+            text = "${(usedFraction * 100).toInt()}%",
+            style = MaterialTheme.typography.titleSmall,
+        )
+    }
+}
+
 @Composable
 private fun StorageHeroCard(stats: StorageStats?, onClick: () -> Unit) {
     Card(
@@ -273,37 +364,39 @@ private fun StorageHeroCard(stats: StorageStats?, onClick: () -> Unit) {
             .height(150.dp)
             .clickable(onClick = onClick),
     ) {
-        Column(Modifier.padding(16.dp).fillMaxSize()) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Filled.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StorageDonut(
+                usedFraction = stats?.usedFraction ?: 0f,
+                modifier = Modifier.size(96.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Storage", style = MaterialTheme.typography.titleMedium)
+                if (stats != null) {
+                    Text(
+                        text = "${FormatUtils.formatFileSize(stats.usedBytes)} used",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "${FormatUtils.formatFileSize(stats.freeBytes)} free of ${FormatUtils.formatFileSize(stats.totalBytes)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Spacer(Modifier.width(12.dp))
-                Text("Storage", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.weight(1f))
-            if (stats != null) {
-                LinearProgressIndicator(
-                    progress = { stats.usedFraction },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "${FormatUtils.formatFileSize(stats.usedBytes)} of ${FormatUtils.formatFileSize(stats.totalBytes)} used",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "View breakdown",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
