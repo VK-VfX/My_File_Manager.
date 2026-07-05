@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,7 +51,7 @@ import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.update.UpdateViewModel
 import com.vfxsal.filemanager.util.FormatUtils
-import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
+import com.vfxsal.filemanager.ui.components.ShimmerHomeContent
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
 import java.io.File
@@ -104,7 +106,7 @@ fun FilesHomeScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             if (uiState.isLoading && uiState.storageStats == null) {
-                CurlyLoadingIndicator(modifier = Modifier.align(Alignment.Center))
+                ShimmerHomeContent()
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -122,7 +124,15 @@ fun FilesHomeScreen(
                         }
                     }
 
-                    item { StorageUsageCard(uiState.storageStats, onClick = onOpenStorageBreakdown) }
+                    item {
+                        HomeHeroCarousel(
+                            stats = uiState.storageStats,
+                            onOpenStorageBreakdown = onOpenStorageBreakdown,
+                            onOpenTimeline = onOpenTimeline,
+                            onOpenVault = onOpenVault,
+                            onOpenTrash = onOpenTrash,
+                        )
+                    }
 
                     if (uiState.suggestions.isNotEmpty()) {
                         item {
@@ -154,18 +164,6 @@ fun FilesHomeScreen(
                         InternalStorageRow(
                             onClick = { onOpenDirectory(Environment.getExternalStorageDirectory().absolutePath) },
                         )
-                    }
-
-                    item {
-                        TimelineRow(onClick = onOpenTimeline)
-                    }
-
-                    item {
-                        VaultRow(onClick = onOpenVault)
-                    }
-
-                    item {
-                        RecycleBinRow(onClick = onOpenTrash)
                     }
 
                     if (uiState.recentFiles.isNotEmpty()) {
@@ -200,15 +198,97 @@ fun FilesHomeScreen(
     }
 }
 
+/**
+ * Swipeable hero deck at the top of Files home: Storage, Timeline, Vault and Recycle Bin
+ * as one carousel (with the next card peeking in from the edge) instead of four stacked
+ * full-width cards, so the category grid is visible without scrolling.
+ */
 @Composable
-private fun StorageUsageCard(stats: StorageStats?, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(Modifier.padding(16.dp)) {
+private fun HomeHeroCarousel(
+    stats: StorageStats?,
+    onOpenStorageBreakdown: () -> Unit,
+    onOpenTimeline: () -> Unit,
+    onOpenVault: () -> Unit,
+    onOpenTrash: () -> Unit,
+) {
+    val pagerState = rememberPagerState { 4 }
+    Column {
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(end = 40.dp),
+            pageSpacing = 12.dp,
+        ) { page ->
+            when (page) {
+                0 -> StorageHeroCard(stats = stats, onClick = onOpenStorageBreakdown)
+                1 -> HeroCard(
+                    icon = Icons.Filled.History,
+                    title = "Timeline",
+                    subtitle = "Browse your photos and videos by date",
+                    onClick = onOpenTimeline,
+                )
+                2 -> HeroCard(
+                    icon = Icons.Filled.Lock,
+                    title = "Secure Vault",
+                    subtitle = "PIN-protected private space for your files",
+                    onClick = onOpenVault,
+                )
+                else -> HeroCard(
+                    icon = Icons.Filled.DeleteOutline,
+                    title = "Recycle Bin",
+                    subtitle = "Restore or permanently delete removed items",
+                    onClick = onOpenTrash,
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            repeat(4) { index ->
+                val isCurrent = pagerState.currentPage == index
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(if (isCurrent) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isCurrent) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageHeroCard(stats: StorageStats?, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(Modifier.padding(16.dp).fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.width(12.dp))
                 Text("Storage", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.weight(1f))
             if (stats != null) {
                 LinearProgressIndicator(
                     progress = { stats.usedFraction },
@@ -224,6 +304,41 @@ private fun StorageUsageCard(stats: StorageStats?, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun HeroCard(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(Modifier.padding(16.dp).fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.weight(1f))
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -385,75 +500,6 @@ private fun InternalStorageRow(onClick: () -> Unit) {
                 Text("Internal Storage", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = "Browse all files",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun TimelineRow(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.History, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Timeline", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = "Browse your photos and videos by date",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun VaultRow(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Secure Vault", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = "PIN-protected private space for your files",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun RecycleBinRow(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Recycle Bin", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = "Restore or permanently delete recently removed items",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

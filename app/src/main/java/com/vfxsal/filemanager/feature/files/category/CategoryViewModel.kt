@@ -13,6 +13,8 @@ import com.vfxsal.filemanager.feature.files.util.BatchRenameOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.files.util.RenamePattern
 import com.vfxsal.filemanager.feature.files.vault.VaultOps
+import com.vfxsal.filemanager.feature.settings.CategoryViewMode
+import com.vfxsal.filemanager.feature.settings.SettingsStore
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,12 +32,20 @@ data class CategoryUiState(
     val ascending: Boolean = false,
     val selectionMode: Boolean = false,
     val selectedPaths: Set<String> = emptySet(),
+    val viewMode: CategoryViewMode = CategoryViewMode.GRID,
 )
 
 class CategoryViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(CategoryUiState())
+    private val _uiState = MutableStateFlow(
+        CategoryUiState(viewMode = SettingsStore.getCategoryViewMode(application)),
+    )
     val uiState: StateFlow<CategoryUiState> = _uiState.asStateFlow()
+
+    fun setViewMode(mode: CategoryViewMode) {
+        SettingsStore.setCategoryViewMode(getApplication(), mode)
+        _uiState.update { it.copy(viewMode = mode) }
+    }
 
     private var loadedCategory: FileCategory? = null
     private var rawEntries: List<FileEntry> = emptyList()
@@ -60,8 +70,15 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
     private fun fetch(category: FileCategory) {
         val sortBy = _uiState.value.sortBy
         val ascending = _uiState.value.ascending
+        val viewMode = _uiState.value.viewMode
         viewModelScope.launch {
-            _uiState.value = CategoryUiState(category = category, isLoading = true, sortBy = sortBy, ascending = ascending)
+            _uiState.value = CategoryUiState(
+                category = category,
+                isLoading = true,
+                sortBy = sortBy,
+                ascending = ascending,
+                viewMode = viewMode,
+            )
             rawEntries = withContext(Dispatchers.IO) {
                 FileOps.filesByCategory(Environment.getExternalStorageDirectory(), category)
             }

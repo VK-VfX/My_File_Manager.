@@ -60,13 +60,14 @@ import com.vfxsal.filemanager.feature.files.components.DeleteConfirmDialog
 import com.vfxsal.filemanager.feature.files.components.EmptyState
 import com.vfxsal.filemanager.feature.files.components.FileActionsHost
 import com.vfxsal.filemanager.feature.files.components.FileListItem
+import com.vfxsal.filemanager.feature.files.components.SwipeableFileRow
 import com.vfxsal.filemanager.feature.files.components.TagPickerDialog
 import com.vfxsal.filemanager.feature.files.components.TextInputDialog
 import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.components.validateFileName
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
-import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
+import com.vfxsal.filemanager.ui.components.ShimmerFileList
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -223,9 +224,7 @@ fun DirectoryBrowserScreen(
             }
             Crossfade(targetState = browserContentState, label = "directoryBrowserContent") { state ->
                 when (state) {
-                    "loading" -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CurlyLoadingIndicator()
-                    }
+                    "loading" -> ShimmerFileList()
                     "empty" -> EmptyState(
                         message = if (uiState.searchActive && uiState.searchQuery.isNotBlank()) {
                             "No matches"
@@ -235,25 +234,36 @@ fun DirectoryBrowserScreen(
                     )
                     else -> LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(uiState.entries, key = { it.path }) { entry ->
-                            FileListItem(
-                                entry = entry,
-                                selectionMode = uiState.selectionMode,
-                                selected = uiState.selectedPaths.contains(entry.path),
-                                onClick = {
-                                    when {
-                                        uiState.selectionMode -> viewModel.toggleSelection(entry.path)
-                                        entry.isDirectory -> onNavigate(entry.path)
-                                        entry.category == FileCategory.IMAGES ->
-                                            onOpenImage(entry.path, uiState.sortBy, uiState.ascending)
-                                        else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
-                                            scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
-                                        }
+                            SwipeableFileRow(
+                                enabled = !uiState.selectionMode,
+                                canShare = !entry.isDirectory,
+                                onShare = {
+                                    if (!FileOps.tryShare(context, listOf(entry.file))) {
+                                        scope.launch { snackbarHostState.showSnackbar("Unable to share this file") }
                                     }
                                 },
-                                onLongClick = { viewModel.enterSelectionMode(entry.path) },
-                                onInfoClick = { actionsState.showDetails(entry) },
+                                onDelete = { actionsState.requestDelete(entry) },
                                 modifier = Modifier.animateItem(),
-                            )
+                            ) {
+                                FileListItem(
+                                    entry = entry,
+                                    selectionMode = uiState.selectionMode,
+                                    selected = uiState.selectedPaths.contains(entry.path),
+                                    onClick = {
+                                        when {
+                                            uiState.selectionMode -> viewModel.toggleSelection(entry.path)
+                                            entry.isDirectory -> onNavigate(entry.path)
+                                            entry.category == FileCategory.IMAGES ->
+                                                onOpenImage(entry.path, uiState.sortBy, uiState.ascending)
+                                            else -> if (!FileOps.openOrEdit(context, entry, onEditFile)) {
+                                                scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                            }
+                                        }
+                                    },
+                                    onLongClick = { viewModel.enterSelectionMode(entry.path) },
+                                    onInfoClick = { actionsState.showDetails(entry) },
+                                )
+                            }
                         }
                     }
                 }
