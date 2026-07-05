@@ -8,6 +8,7 @@ import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.feature.clean.scan.DashboardScanner
 import com.vfxsal.filemanager.feature.clean.scan.LargeFileScanner
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
+import com.vfxsal.filemanager.util.OperationProgressBus
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -92,12 +93,18 @@ class LargeFilesViewModel(application: Application) : AndroidViewModel(applicati
         scanJob?.cancel()
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isDeleting = true) }
-            for (entry in toDelete) {
-                try {
-                    TrashOps.moveToTrash(getApplication<Application>(), File(entry.path))
-                } catch (e: SecurityException) {
-                    // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
+            OperationProgressBus.start("Deleting large files", toDelete.size)
+            try {
+                toDelete.forEachIndexed { index, entry ->
+                    try {
+                        TrashOps.moveToTrash(getApplication<Application>(), File(entry.path))
+                    } catch (e: SecurityException) {
+                        // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
+                    }
+                    OperationProgressBus.update(index + 1)
                 }
+            } finally {
+                OperationProgressBus.finish()
             }
             _uiState.update { it.copy(isDeleting = false) }
             scan()

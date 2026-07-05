@@ -45,6 +45,7 @@ import com.vfxsal.filemanager.feature.music.musicNavGraph
 import com.vfxsal.filemanager.feature.settings.SettingsViewModel
 import com.vfxsal.filemanager.feature.video.videoNavGraph
 import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
+import com.vfxsal.filemanager.ui.components.OperationProgressOverlay
 
 /**
  * A single shared fade+subtle-slide transition applied to every destination in the app
@@ -129,6 +130,9 @@ fun AppRoot(settingsViewModel: SettingsViewModel) {
             wallpapersNavGraph(navController)
         }
     }
+
+    // Batch-operation progress (bulk deletes etc.) from any tab surfaces here.
+    OperationProgressOverlay()
 }
 
 /**

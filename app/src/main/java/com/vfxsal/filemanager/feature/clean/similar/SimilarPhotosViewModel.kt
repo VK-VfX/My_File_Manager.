@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.feature.clean.model.SimilarPhotoGroup
 import com.vfxsal.filemanager.feature.clean.scan.SimilarPhotosScanner
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
+import com.vfxsal.filemanager.util.OperationProgressBus
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -91,12 +92,18 @@ class SimilarPhotosViewModel(application: Application) : AndroidViewModel(applic
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isDeleting = true) }
             val context = getApplication<Application>()
-            for (entry in toDelete) {
-                try {
-                    TrashOps.moveToTrash(context, File(entry.path))
-                } catch (e: SecurityException) {
-                    // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
+            OperationProgressBus.start("Deleting similar photos", toDelete.size)
+            try {
+                toDelete.forEachIndexed { index, entry ->
+                    try {
+                        TrashOps.moveToTrash(context, File(entry.path))
+                    } catch (e: SecurityException) {
+                        // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
+                    }
+                    OperationProgressBus.update(index + 1)
                 }
+            } finally {
+                OperationProgressBus.finish()
             }
             _uiState.update { it.copy(isDeleting = false) }
             scan()

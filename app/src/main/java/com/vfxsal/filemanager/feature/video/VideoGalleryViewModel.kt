@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.feature.video.data.VideoFolder
 import com.vfxsal.filemanager.feature.video.data.VideoItem
 import com.vfxsal.filemanager.feature.video.data.VideoRepository
+import com.vfxsal.filemanager.util.OperationProgressBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,7 +84,18 @@ class VideoGalleryViewModel(application: Application) : AndroidViewModel(applica
         val targets = candidates.filter { it.id in selected }
         viewModelScope.launch {
             val deletedIds = withContext(Dispatchers.IO) {
-                targets.filter { repository.deleteVideo(it) }.map { it.id }.toSet()
+                OperationProgressBus.start("Deleting ${targets.size} videos", targets.size)
+                try {
+                    var done = 0
+                    targets.filter { video ->
+                        val deleted = repository.deleteVideo(video)
+                        done++
+                        OperationProgressBus.update(done)
+                        deleted
+                    }.map { it.id }.toSet()
+                } finally {
+                    OperationProgressBus.finish()
+                }
             }
             if (deletedIds.isNotEmpty()) {
                 val updatedVideos = _uiState.value.allVideos.filterNot { it.id in deletedIds }

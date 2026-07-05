@@ -8,6 +8,7 @@ import com.vfxsal.filemanager.feature.clean.model.JunkGroup
 import com.vfxsal.filemanager.feature.clean.model.JunkItem
 import com.vfxsal.filemanager.feature.clean.scan.JunkScanner
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
+import com.vfxsal.filemanager.util.OperationProgressBus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -82,8 +83,14 @@ class JunkFilesViewModel(application: Application) : AndroidViewModel(applicatio
         scanJob?.cancel()
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isDeleting = true) }
-            for (item in itemsToDelete) {
-                deleteJunkItem(item)
+            OperationProgressBus.start("Cleaning junk files", itemsToDelete.size)
+            try {
+                itemsToDelete.forEachIndexed { index, item ->
+                    deleteJunkItem(item)
+                    OperationProgressBus.update(index + 1)
+                }
+            } finally {
+                OperationProgressBus.finish()
             }
             _uiState.update { it.copy(isDeleting = false) }
             scan()

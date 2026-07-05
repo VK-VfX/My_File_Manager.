@@ -10,6 +10,7 @@ import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.files.util.RenamePattern
 import com.vfxsal.filemanager.feature.files.util.ZipOps
 import com.vfxsal.filemanager.feature.files.vault.VaultOps
+import com.vfxsal.filemanager.util.OperationProgressBus
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -175,7 +176,20 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         val targets = _uiState.value.selectedPaths.map { File(it) }
         val context = getApplication<Application>()
         viewModelScope.launch {
-            val deleted = withContext(Dispatchers.IO) { targets.count { TrashOps.moveToTrash(context, it) } }
+            val deleted = withContext(Dispatchers.IO) {
+                OperationProgressBus.start("Deleting ${targets.size} items", targets.size)
+                try {
+                    var done = 0
+                    targets.count { target ->
+                        val moved = TrashOps.moveToTrash(context, target)
+                        done++
+                        OperationProgressBus.update(done)
+                        moved
+                    }
+                } finally {
+                    OperationProgressBus.finish()
+                }
+            }
             clearSelection()
             fetchChildren()
             onResult(deleted)

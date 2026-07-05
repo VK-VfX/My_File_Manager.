@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,7 +75,9 @@ import com.vfxsal.filemanager.feature.music.rememberMusicViewModel
 import com.vfxsal.filemanager.feature.music.ui.components.AlbumArtThumbnail
 import com.vfxsal.filemanager.feature.music.ui.components.MiniPlayerBar
 import com.vfxsal.filemanager.feature.music.ui.components.TrackRow
+import com.vfxsal.filemanager.ui.components.ActionBarButton
 import com.vfxsal.filemanager.ui.components.CurlyLoadingIndicator
+import com.vfxsal.filemanager.ui.components.LabeledActionBar
 import kotlinx.coroutines.launch
 
 private enum class MusicTab(val label: String) {
@@ -138,23 +139,23 @@ fun MusicLibraryScreen(
         },
         bottomBar = {
             if (library.selectionMode) {
-                BottomAppBar {
-                    IconButton(onClick = {
-                        val uris = library.tracks.filter { it.id in library.selectedIds }.map { it.contentUri }
-                        if (uris.isNotEmpty()) {
-                            val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                                type = "audio/*"
-                                putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                LabeledActionBar {
+                    ActionBarButton(
+                        icon = Icons.Filled.Share,
+                        label = "Share",
+                        onClick = {
+                            val uris = library.tracks.filter { it.id in library.selectedIds }.map { it.contentUri }
+                            if (uris.isNotEmpty()) {
+                                val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                                    type = "audio/*"
+                                    putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                runCatching { context.startActivity(Intent.createChooser(intent, null)) }
                             }
-                            runCatching { context.startActivity(Intent.createChooser(intent, null)) }
-                        }
-                    }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share")
-                    }
-                    IconButton(onClick = { showDeleteSelectedDialog = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                    }
+                        },
+                    )
+                    ActionBarButton(icon = Icons.Filled.Delete, label = "Delete", onClick = { showDeleteSelectedDialog = true })
                 }
             } else {
                 AnimatedVisibility(

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -126,20 +127,24 @@ private fun DashboardContent(
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { CleanHealthHeader(uiState) }
+        item { StorageOverviewCard(uiState) }
+        item { ReclaimableCard(uiState, modifier = Modifier.padding(horizontal = 16.dp)) }
         item {
             Text(
-                text = "Clean",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(horizontal = 20.dp),
+                text = "Clean-up tools",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp),
             )
         }
-        item { StorageOverviewCard(uiState) }
         item {
             CleanCategoryCard(
                 title = "Junk Files",
-                subtitle = teaserSubtitle(uiState.isScanning, uiState.junkTeaser),
+                description = "App caches, empty folders and leftover installers",
                 icon = Icons.Filled.DeleteSweep,
                 iconTint = MaterialTheme.colorScheme.error,
+                teaser = uiState.junkTeaser,
+                isScanning = uiState.isScanning,
                 onClick = onNavigateJunk,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -147,9 +152,11 @@ private fun DashboardContent(
         item {
             CleanCategoryCard(
                 title = "Large Files",
-                subtitle = teaserSubtitle(uiState.isScanning, uiState.largeTeaser),
+                description = "The biggest files taking up space on this device",
                 icon = Icons.Filled.PhotoSizeSelectLarge,
                 iconTint = MaterialTheme.colorScheme.tertiary,
+                teaser = uiState.largeTeaser,
+                isScanning = uiState.isScanning,
                 onClick = onNavigateLarge,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -157,9 +164,11 @@ private fun DashboardContent(
         item {
             CleanCategoryCard(
                 title = "Duplicate Files",
-                subtitle = teaserSubtitle(uiState.isScanning, uiState.duplicateTeaser),
+                description = "Exact copies of the same file stored more than once",
                 icon = Icons.Filled.ContentCopy,
                 iconTint = MaterialTheme.colorScheme.primary,
+                teaser = uiState.duplicateTeaser,
+                isScanning = uiState.isScanning,
                 onClick = onNavigateDuplicates,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -167,9 +176,11 @@ private fun DashboardContent(
         item {
             CleanCategoryCard(
                 title = "Similar Photos",
-                subtitle = "Find near-duplicate photos",
+                description = "Near-identical shots you probably don't need twice",
                 icon = Icons.Filled.Collections,
                 iconTint = MaterialTheme.colorScheme.secondary,
+                teaser = null,
+                isScanning = uiState.isScanning,
                 onClick = onNavigateSimilarPhotos,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -186,12 +197,86 @@ private fun DashboardContent(
     }
 }
 
-private fun teaserSubtitle(isScanning: Boolean, teaser: CleanTeaser): String =
-    if (isScanning && teaser.itemCount == 0) {
-        "Scanning…"
-    } else {
-        "${teaser.itemCount} items · ${FormatUtils.formatFileSize(teaser.totalBytes)}"
+/** Big title plus a one-line storage health verdict, colored by how full the device is. */
+@Composable
+private fun CleanHealthHeader(uiState: CleanDashboardUiState) {
+    Column(Modifier.padding(horizontal = 20.dp)) {
+        Text("Clean", style = MaterialTheme.typography.headlineMedium)
+        val stats = uiState.storageStats
+        if (stats != null) {
+            val freeFraction = 1f - stats.usedFraction
+            val healthText: String
+            val healthColor: Color
+            when {
+                freeFraction > 0.25f -> {
+                    healthText = "Storage is healthy"
+                    healthColor = MaterialTheme.colorScheme.tertiary
+                }
+                freeFraction > 0.10f -> {
+                    healthText = "Storage is getting full"
+                    healthColor = MaterialTheme.colorScheme.primary
+                }
+                else -> {
+                    healthText = "Storage is almost full"
+                    healthColor = MaterialTheme.colorScheme.error
+                }
+            }
+            Text(
+                text = "$healthText · ${FormatUtils.formatFileSize(stats.freeBytes)} free",
+                style = MaterialTheme.typography.bodyMedium,
+                color = healthColor,
+            )
+        }
     }
+}
+
+/** Highlights the total space the junk and duplicate scanners believe can be freed. */
+@Composable
+private fun ReclaimableCard(uiState: CleanDashboardUiState, modifier: Modifier = Modifier) {
+    val reclaimable = uiState.junkTeaser.totalBytes + uiState.duplicateTeaser.totalBytes
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = if (uiState.isScanning && reclaimable == 0L) {
+                        "Scanning for savings…"
+                    } else {
+                        "Up to ${FormatUtils.formatFileSize(reclaimable)} can be freed"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = "From junk files and duplicates",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun StoragePermissionRequired(onGrantClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -362,9 +447,11 @@ private fun CategoryLegend(categoryTotals: Map<FileCategory, Long>) {
 @Composable
 private fun CleanCategoryCard(
     title: String,
-    subtitle: String,
+    description: String,
     icon: ImageVector,
     iconTint: Color,
+    teaser: CleanTeaser?,
+    isScanning: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -373,31 +460,57 @@ private fun CleanCategoryCard(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(iconTint.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = iconTint)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(iconTint.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = iconTint)
+                }
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                when {
+                    teaser == null -> StatPill(text = "Tap to scan", tint = iconTint)
+                    isScanning && teaser.itemCount == 0 -> StatPill(text = "Scanning…", tint = iconTint)
+                    else -> {
+                        StatPill(text = "${teaser.itemCount} items", tint = iconTint)
+                        StatPill(text = FormatUtils.formatFileSize(teaser.totalBytes), tint = iconTint)
+                    }
+                }
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
+}
+
+@Composable
+private fun StatPill(text: String, tint: Color) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(tint.copy(alpha = 0.14f))
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    )
 }

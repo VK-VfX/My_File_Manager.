@@ -8,13 +8,14 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.vfxsal.filemanager.ui.components.ActionBarButton
+import com.vfxsal.filemanager.ui.components.LabeledActionBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,9 +37,9 @@ fun VideoSelectionTopBar(selectedCount: Int, onClear: () -> Unit, onSelectAll: (
 
 @Composable
 fun VideoSelectionBottomBar(onShare: () -> Unit, onDelete: () -> Unit) {
-    BottomAppBar {
-        IconButton(onClick = onShare) { Icon(Icons.Filled.Share, contentDescription = "Share") }
-        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
+    LabeledActionBar {
+        ActionBarButton(icon = Icons.Filled.Share, label = "Share", onClick = onShare)
+        ActionBarButton(icon = Icons.Filled.Delete, label = "Delete", onClick = onDelete)
     }
 }
 

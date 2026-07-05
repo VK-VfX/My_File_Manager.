@@ -3,6 +3,7 @@ package com.vfxsal.filemanager.feature.files.trash
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vfxsal.filemanager.util.OperationProgressBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +52,22 @@ class TrashViewModel(application: Application) : AndroidViewModel(application) {
 
     fun emptyTrash(onResult: (Int) -> Unit) {
         viewModelScope.launch {
-            val count = withContext(Dispatchers.IO) { TrashOps.emptyTrash(getApplication<Application>()) }
+            val context = getApplication<Application>()
+            val count = withContext(Dispatchers.IO) {
+                val entries = TrashOps.listEntries(context)
+                OperationProgressBus.start("Emptying recycle bin", entries.size)
+                try {
+                    var done = 0
+                    entries.count { entry ->
+                        val deleted = TrashOps.deleteForever(context, entry)
+                        done++
+                        OperationProgressBus.update(done)
+                        deleted
+                    }
+                } finally {
+                    OperationProgressBus.finish()
+                }
+            }
             load()
             onResult(count)
         }

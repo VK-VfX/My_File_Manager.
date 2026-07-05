@@ -83,6 +83,8 @@ import com.vfxsal.filemanager.feature.files.home.categoryLabel
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.settings.CategoryViewMode
+import com.vfxsal.filemanager.ui.components.ActionBarButton
+import com.vfxsal.filemanager.ui.components.LabeledActionBar
 import com.vfxsal.filemanager.ui.components.ShimmerFileList
 import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
@@ -195,38 +197,38 @@ fun CategoryListScreen(
                 enter = slideInVertically(tween(220, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(220)),
                 exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(180)),
             ) {
-                BottomAppBar {
-                    IconButton(onClick = {
-                        val files = viewModel.selectedEntries().filterNot { it.isDirectory }.map { it.file }
-                        if (!FileOps.tryShare(context, files)) {
-                            scope.launch { snackbarHostState.showSnackbar("Nothing to share") }
-                        }
-                    }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share")
-                    }
-                    IconButton(onClick = {
-                        clipboardViewModel.cut(viewModel.selectedEntries().map { it.path })
-                        viewModel.clearSelection()
-                        scope.launch { snackbarHostState.showSnackbar("Ready to move - open the destination folder and paste") }
-                    }) {
-                        Icon(Icons.Filled.ContentCut, contentDescription = "Move")
-                    }
-                    IconButton(onClick = {
-                        viewModel.moveSelectedToVault { count ->
-                            scope.launch { snackbarHostState.showSnackbar("Moved $count item(s) to the vault") }
-                        }
-                    }) {
-                        Icon(Icons.Filled.Lock, contentDescription = "Move to vault")
-                    }
-                    IconButton(onClick = { showTagDialog = true }) {
-                        Icon(Icons.Filled.Label, contentDescription = "Tag")
-                    }
-                    IconButton(onClick = { showBatchRenameDialog = true }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Rename")
-                    }
-                    IconButton(onClick = { showDeleteSelectedDialog = true }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                    }
+                LabeledActionBar {
+                    ActionBarButton(
+                        icon = Icons.Filled.Share,
+                        label = "Share",
+                        onClick = {
+                            val files = viewModel.selectedEntries().filterNot { it.isDirectory }.map { it.file }
+                            if (!FileOps.tryShare(context, files)) {
+                                scope.launch { snackbarHostState.showSnackbar("Nothing to share") }
+                            }
+                        },
+                    )
+                    ActionBarButton(
+                        icon = Icons.Filled.ContentCut,
+                        label = "Move",
+                        onClick = {
+                            clipboardViewModel.cut(viewModel.selectedEntries().map { it.path })
+                            viewModel.clearSelection()
+                            scope.launch { snackbarHostState.showSnackbar("Ready to move - open the destination folder and paste") }
+                        },
+                    )
+                    ActionBarButton(
+                        icon = Icons.Filled.Lock,
+                        label = "Vault",
+                        onClick = {
+                            viewModel.moveSelectedToVault { count ->
+                                scope.launch { snackbarHostState.showSnackbar("Moved $count item(s) to the vault") }
+                            }
+                        },
+                    )
+                    ActionBarButton(icon = Icons.Filled.Label, label = "Tag", onClick = { showTagDialog = true })
+                    ActionBarButton(icon = Icons.Filled.Edit, label = "Rename", onClick = { showBatchRenameDialog = true })
+                    ActionBarButton(icon = Icons.Filled.Delete, label = "Delete", onClick = { showDeleteSelectedDialog = true })
                 }
             }
         },

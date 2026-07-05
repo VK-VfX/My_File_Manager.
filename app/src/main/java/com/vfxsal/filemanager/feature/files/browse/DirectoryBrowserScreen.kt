@@ -67,6 +67,8 @@ import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.components.validateFileName
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.ui.components.ActionBarButton
+import com.vfxsal.filemanager.ui.components.LabeledActionBar
 import com.vfxsal.filemanager.ui.components.ShimmerFileList
 import java.io.File
 import kotlinx.coroutines.launch
@@ -164,7 +166,6 @@ fun DirectoryBrowserScreen(
                 exit = slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(180)),
             ) {
                 SelectionActionBar(
-                    selectionCount = uiState.selectedPaths.size,
                     onCopy = {
                         clipboardViewModel.copy(uiState.selectedPaths.toList())
                         viewModel.clearSelection()
@@ -484,7 +485,6 @@ private fun PasteBanner(count: Int, mode: ClipboardMode?, onPaste: () -> Unit, o
 
 @Composable
 private fun SelectionActionBar(
-    selectionCount: Int,
     onCopy: () -> Unit,
     onMove: () -> Unit,
     onDelete: () -> Unit,
@@ -494,14 +494,14 @@ private fun SelectionActionBar(
     onMoveToVault: () -> Unit,
     onTag: () -> Unit,
 ) {
-    BottomAppBar {
-        IconButton(onClick = onCopy) { Icon(Icons.Filled.ContentCopy, contentDescription = "Copy") }
-        IconButton(onClick = onMove) { Icon(Icons.Filled.ContentCut, contentDescription = "Move") }
-        IconButton(onClick = onShare) { Icon(Icons.Filled.Share, contentDescription = "Share") }
-        IconButton(onClick = onCompress) { Icon(Icons.Filled.FolderZip, contentDescription = "Compress") }
-        IconButton(onClick = onMoveToVault) { Icon(Icons.Filled.Lock, contentDescription = "Move to vault") }
-        IconButton(onClick = onTag) { Icon(Icons.Filled.Label, contentDescription = "Tag") }
-        IconButton(onClick = onRename) { Icon(Icons.Filled.Edit, contentDescription = "Rename") }
-        IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
+    LabeledActionBar {
+        ActionBarButton(icon = Icons.Filled.ContentCopy, label = "Copy", onClick = onCopy)
+        ActionBarButton(icon = Icons.Filled.ContentCut, label = "Move", onClick = onMove)
+        ActionBarButton(icon = Icons.Filled.Share, label = "Share", onClick = onShare)
+        ActionBarButton(icon = Icons.Filled.FolderZip, label = "Compress", onClick = onCompress)
+        ActionBarButton(icon = Icons.Filled.Lock, label = "Vault", onClick = onMoveToVault)
+        ActionBarButton(icon = Icons.Filled.Label, label = "Tag", onClick = onTag)
+        ActionBarButton(icon = Icons.Filled.Edit, label = "Rename", onClick = onRename)
+        ActionBarButton(icon = Icons.Filled.Delete, label = "Delete", onClick = onDelete)
     }
 }

@@ -16,6 +16,7 @@ import com.vfxsal.filemanager.feature.music.data.Track
 import com.vfxsal.filemanager.feature.music.data.toMediaItem
 import com.vfxsal.filemanager.feature.music.player.MusicController
 import com.vfxsal.filemanager.feature.music.player.MusicPlaybackState
+import com.vfxsal.filemanager.util.OperationProgressBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -113,7 +114,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         val targets = _library.value.tracks.filter { it.id in selected }
         viewModelScope.launch {
             val deletedIds = withContext(Dispatchers.IO) {
-                targets.filter { repository.deleteTrack(it) }.map { it.id }.toSet()
+                OperationProgressBus.start("Deleting ${targets.size} tracks", targets.size)
+                try {
+                    var done = 0
+                    targets.filter { track ->
+                        val deleted = repository.deleteTrack(track)
+                        done++
+                        OperationProgressBus.update(done)
+                        deleted
+                    }.map { it.id }.toSet()
+                } finally {
+                    OperationProgressBus.finish()
+                }
             }
             if (deletedIds.isNotEmpty()) {
                 val updatedTracks = _library.value.tracks.filterNot { it.id in deletedIds }
