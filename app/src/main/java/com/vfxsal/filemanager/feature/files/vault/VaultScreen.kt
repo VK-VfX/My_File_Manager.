@@ -23,9 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -75,11 +77,19 @@ fun VaultScreen(
     LaunchedEffect(Unit) { viewModel.checkPinStatus() }
 
     if (!uiState.isUnlocked) {
+        val context = LocalContext.current
+        val biometricAvailable = remember { BiometricUnlock.isAvailable(context) }
         VaultUnlockScreen(
             hasPin = uiState.hasPin,
+            lockoutSecondsRemaining = uiState.lockoutSecondsRemaining,
             onBack = onBack,
             onCreatePin = { pin -> viewModel.createPin(pin) },
             onUnlock = { pin, onResult -> viewModel.unlock(pin, onResult) },
+            onBiometricUnlock = if (biometricAvailable && uiState.hasPin) {
+                { BiometricUnlock.authenticate(context) { viewModel.unlockWithBiometrics() } }
+            } else {
+                null
+            },
         )
     } else {
         VaultContentScreen(
@@ -97,9 +107,11 @@ fun VaultScreen(
 @Composable
 private fun VaultUnlockScreen(
     hasPin: Boolean,
+    lockoutSecondsRemaining: Int,
     onBack: () -> Unit,
     onCreatePin: (String) -> Unit,
     onUnlock: (String, (Boolean) -> Unit) -> Unit,
+    onBiometricUnlock: (() -> Unit)?,
 ) {
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
@@ -160,7 +172,14 @@ private fun VaultUnlockScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            if (error != null) {
+            if (lockoutSecondsRemaining > 0) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Too many attempts - try again in ${lockoutSecondsRemaining}s",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else if (error != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
@@ -182,6 +201,14 @@ private fun VaultUnlockScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(if (isCreating) "Create Vault" else "Unlock")
+            }
+            if (onBiometricUnlock != null) {
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = onBiometricUnlock, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Fingerprint, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Use fingerprint")
+                }
             }
         }
     }

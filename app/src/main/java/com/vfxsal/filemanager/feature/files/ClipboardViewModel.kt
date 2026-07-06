@@ -3,9 +3,13 @@ package com.vfxsal.filemanager.feature.files
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vfxsal.filemanager.data.FileIndex
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.util.OperationProgressBus
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,29 +57,41 @@ class ClipboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun pasteInto(targetPath: String, onResult: (PasteResult) -> Unit) {
         val snapshot = _state.value
         if (snapshot.isEmpty) return
+        val context = getApplication<Application>()
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            // NonCancellable so navigating between folders (which can recreate this VM's
+            // scope) doesn't cancel a transfer mid-file and leave a half-copied mess.
+            val result = withContext(Dispatchers.IO + NonCancellable) {
                 val targetDir = File(targetPath)
                 var pasted = 0
+                val verb = if (snapshot.mode == ClipboardMode.MOVE) "Moving" else "Copying"
+                OperationProgressBus.start("$verb ${snapshot.paths.size} items", snapshot.paths.size)
                 try {
-                    snapshot.paths.forEach { sourcePath ->
+                    snapshot.paths.forEachIndexed { index, sourcePath ->
                         val source = File(sourcePath)
-                        if (!source.exists()) return@forEach
                         val targetAbsolute = targetDir.absolutePath
                         val sourceAbsolute = source.absolutePath
                         val isNoOpOrSelfNested = targetAbsolute == sourceAbsolute ||
                             targetAbsolute.startsWith(sourceAbsolute + File.separator)
-                        if (isNoOpOrSelfNested) return@forEach
-                        when (snapshot.mode) {
-                            ClipboardMode.COPY -> FileOps.copyInto(source, targetDir)
-                            ClipboardMode.MOVE -> FileOps.moveInto(source, targetDir)
-                            null -> Unit
+                        if (source.exists() && !isNoOpOrSelfNested) {
+                            when (snapshot.mode) {
+                                ClipboardMode.COPY -> FileOps.copyInto(source, targetDir)
+                                ClipboardMode.MOVE -> {
+                                    val dest = FileOps.moveInto(source, targetDir)
+                                    FileTagsStore.onPathMoved(context, sourcePath, dest.absolutePath)
+                                }
+                                null -> Unit
+                            }
+                            pasted++
                         }
-                        pasted++
+                        OperationProgressBus.update(index + 1)
                     }
                     PasteResult.Success(pasted)
                 } catch (e: Exception) {
                     PasteResult.Failure(e.message ?: "Paste failed")
+                } finally {
+                    OperationProgressBus.finish()
+                    FileIndex.invalidate()
                 }
             }
             if (result is PasteResult.Success) clear()

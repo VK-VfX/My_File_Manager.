@@ -52,6 +52,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -375,7 +377,7 @@ private fun CategoryDonutChart(categoryTotals: Map<FileCategory, Long>, modifier
     val total = categoryTotals.values.sum().coerceAtLeast(1L)
     val entries = categoryTotals.entries.filter { it.value > 0 }.sortedByDescending { it.value }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.semantics { contentDescription = "Storage usage by file category" }) {
         val strokeWidth = size.minDimension * 0.2f
         val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
         val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)

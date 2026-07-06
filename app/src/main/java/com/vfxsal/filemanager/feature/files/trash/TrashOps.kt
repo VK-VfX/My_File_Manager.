@@ -1,7 +1,10 @@
 package com.vfxsal.filemanager.feature.files.trash
 
 import android.content.Context
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.clean.scan.FileTreeWalker
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
+import com.vfxsal.filemanager.feature.settings.SettingsStore
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -11,14 +14,14 @@ import java.util.concurrent.TimeUnit
  * screens, and the Clean feature's junk/large-file/duplicate scanners). Trashed items are
  * physically moved into an app-private directory (invisible to other apps and the gallery)
  * rather than removed outright, and a flat manifest file records enough to restore them to
- * their original location later. Entries older than [PURGE_AFTER_MILLIS] are permanently
- * deleted the next time the trash screen loads.
+ * their original location later. Entries older than the user's retention setting (see
+ * [SettingsStore.getTrashRetentionDays]) are permanently deleted the next time the trash
+ * screen loads.
  */
 object TrashOps {
 
     private const val TRASH_DIR_NAME = "trash"
     private const val MANIFEST_NAME = "manifest.txt"
-    private val PURGE_AFTER_MILLIS = TimeUnit.DAYS.toMillis(30)
 
     data class TrashEntry(
         val id: String,
@@ -49,6 +52,8 @@ object TrashOps {
             }
             if (moved) {
                 appendManifestEntry(context, TrashEntry(id, originalPath, System.currentTimeMillis(), isDirectory, sizeBytes))
+                FileTagsStore.onPathsRemoved(context, listOf(originalPath))
+                FileIndex.invalidate()
             }
             moved
         } catch (e: Exception) {
@@ -74,7 +79,10 @@ object TrashOps {
                 source.copyRecursively(dest, overwrite = false)
                 source.deleteRecursively()
             }
-            if (restored) removeManifestEntry(context, entry.id)
+            if (restored) {
+                removeManifestEntry(context, entry.id)
+                FileIndex.invalidate()
+            }
             restored
         } catch (e: Exception) {
             false
@@ -92,7 +100,8 @@ object TrashOps {
         listEntries(context).count { deleteForever(context, it) }
 
     fun purgeExpired(context: Context) {
-        val cutoff = System.currentTimeMillis() - PURGE_AFTER_MILLIS
+        val retentionMillis = TimeUnit.DAYS.toMillis(SettingsStore.getTrashRetentionDays(context).toLong())
+        val cutoff = System.currentTimeMillis() - retentionMillis
         listEntries(context).filter { it.trashedAtMillis < cutoff }.forEach { deleteForever(context, it) }
     }
 

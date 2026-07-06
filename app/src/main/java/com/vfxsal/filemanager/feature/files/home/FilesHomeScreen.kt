@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -325,7 +327,11 @@ private fun SearchPill(onClick: () -> Unit) {
 private fun StorageDonut(usedFraction: Float, modifier: Modifier = Modifier) {
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val progressColor = MaterialTheme.colorScheme.primary
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    val usedPercent = (usedFraction * 100).toInt()
+    Box(
+        modifier = modifier.semantics { contentDescription = "Storage $usedPercent percent used" },
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val stroke = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round)
             val inset = stroke.width / 2

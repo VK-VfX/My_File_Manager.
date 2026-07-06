@@ -1,16 +1,16 @@
 package com.vfxsal.filemanager.feature.files.category
 
 import android.app.Application
-import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.files.browse.SortBy
 import com.vfxsal.filemanager.feature.files.browse.buildFileEntryComparator
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.BatchRenameOps
-import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.files.util.RenamePattern
 import com.vfxsal.filemanager.feature.files.vault.VaultOps
 import com.vfxsal.filemanager.feature.settings.CategoryViewMode
@@ -81,7 +81,7 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
                 viewMode = viewMode,
             )
             rawEntries = withContext(Dispatchers.IO) {
-                FileOps.filesByCategory(Environment.getExternalStorageDirectory(), category)
+                FileIndex.allFiles().filter { it.category == category }
             }
             _uiState.update { it.copy(isLoading = false) }
             recompute()
@@ -148,12 +148,18 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
 
     fun renameSelected(baseName: String, pattern: RenamePattern, onResult: (Int) -> Unit) {
         val entries = _uiState.value.entries.filter { it.path in _uiState.value.selectedPaths }
+        val context = getApplication<Application>()
         viewModelScope.launch {
             val renamed = withContext(Dispatchers.IO) {
-                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern)
+                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern) { oldPath, newPath ->
+                    FileTagsStore.onPathMoved(context, oldPath, newPath)
+                }
             }
             clearSelection()
-            if (renamed > 0) loadedCategory?.let { fetch(it) }
+            if (renamed > 0) {
+                FileIndex.invalidate()
+                loadedCategory?.let { fetch(it) }
+            }
             onResult(renamed)
         }
     }

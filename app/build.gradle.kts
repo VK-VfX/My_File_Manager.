@@ -12,8 +12,8 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "4.1.0"
+        versionCode = 14
+        versionName = "4.2.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -44,6 +44,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Signed with the same committed keystore as debug so release APKs are
+            // installable straight from GitHub Releases (unsigned APKs can't install
+            // at all). This app is personal/sideloaded - the keystore is not a secret.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
@@ -101,4 +105,6 @@ dependencies {
     implementation(libs.coil.video)
 
     implementation(libs.accompanist.permissions)
+
+    testImplementation(libs.junit)
 }

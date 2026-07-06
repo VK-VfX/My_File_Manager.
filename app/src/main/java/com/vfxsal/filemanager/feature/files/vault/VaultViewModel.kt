@@ -18,6 +18,7 @@ data class VaultUiState(
     val isUnlocked: Boolean = false,
     val isLoading: Boolean = true,
     val entries: List<VaultOps.VaultEntry> = emptyList(),
+    val lockoutSecondsRemaining: Int = 0,
 )
 
 class VaultViewModel(application: Application) : AndroidViewModel(application) {
@@ -36,12 +37,31 @@ class VaultViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun unlock(pin: String, onResult: (Boolean) -> Unit) {
-        val success = VaultOps.verifyPin(getApplication<Application>(), pin)
+        val context = getApplication<Application>()
+        val lockedForMs = VaultOps.lockoutRemainingMs(context)
+        if (lockedForMs > 0) {
+            _uiState.update { it.copy(lockoutSecondsRemaining = ((lockedForMs + 999) / 1000).toInt()) }
+            onResult(false)
+            return
+        }
+        val success = VaultOps.verifyPin(context, pin)
         if (success) {
-            _uiState.update { it.copy(isUnlocked = true) }
+            VaultOps.clearFailedAttempts(context)
+            _uiState.update { it.copy(isUnlocked = true, lockoutSecondsRemaining = 0) }
             load()
+        } else {
+            VaultOps.recordFailedAttempt(context)
+            val nowLockedMs = VaultOps.lockoutRemainingMs(context)
+            _uiState.update { it.copy(lockoutSecondsRemaining = ((nowLockedMs + 999) / 1000).toInt()) }
         }
         onResult(success)
+    }
+
+    /** Called after the system biometric prompt reports success - no PIN involved. */
+    fun unlockWithBiometrics() {
+        VaultOps.clearFailedAttempts(getApplication())
+        _uiState.update { it.copy(isUnlocked = true, lockoutSecondsRemaining = 0) }
+        load()
     }
 
     fun lock() {

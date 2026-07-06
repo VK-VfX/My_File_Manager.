@@ -19,6 +19,10 @@ object SettingsStore {
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_DYNAMIC_COLOR = "dynamic_color"
     private const val KEY_CATEGORY_VIEW_MODE = "category_view_mode"
+    private const val KEY_TRASH_RETENTION_DAYS = "trash_retention_days"
+
+    const val DEFAULT_TRASH_RETENTION_DAYS = 30
+    val TRASH_RETENTION_OPTIONS = listOf(7, 30, 90)
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -44,5 +48,12 @@ object SettingsStore {
 
     fun setCategoryViewMode(context: Context, mode: CategoryViewMode) {
         prefs(context).edit().putString(KEY_CATEGORY_VIEW_MODE, mode.name).apply()
+    }
+
+    fun getTrashRetentionDays(context: Context): Int =
+        prefs(context).getInt(KEY_TRASH_RETENTION_DAYS, DEFAULT_TRASH_RETENTION_DAYS)
+
+    fun setTrashRetentionDays(context: Context, days: Int) {
+        prefs(context).edit().putInt(KEY_TRASH_RETENTION_DAYS, days).apply()
     }
 }

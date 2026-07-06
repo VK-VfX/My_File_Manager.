@@ -2,8 +2,12 @@ package com.vfxsal.filemanager.feature.files.viewer
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -146,6 +150,7 @@ private fun ImageViewerPager(
 ) {
     val pagerState = rememberPagerState(initialPage = initialIndex.coerceIn(0, images.lastIndex)) { images.size }
     var isZoomed by remember { mutableStateOf(false) }
+    var dismissDragY by remember { mutableStateOf(0f) }
 
     LaunchedEffect(pagerState.currentPage) { isZoomed = false }
 
@@ -153,7 +158,30 @@ private fun ImageViewerPager(
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = !isZoomed,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                // Swipe down on an unzoomed photo to dismiss the viewer, like most galleries.
+                .pointerInput(isZoomed) {
+                    if (!isZoomed) {
+                        detectVerticalDragGestures(
+                            onVerticalDrag = { change, dragAmount ->
+                                val next = (dismissDragY + dragAmount).coerceAtLeast(0f)
+                                if (next > 0f) {
+                                    dismissDragY = next
+                                    change.consume()
+                                }
+                            },
+                            onDragEnd = {
+                                if (dismissDragY > 350f) onBack() else dismissDragY = 0f
+                            },
+                            onDragCancel = { dismissDragY = 0f },
+                        )
+                    }
+                }
+                .graphicsLayer {
+                    translationY = dismissDragY
+                    alpha = 1f - (dismissDragY / 1500f).coerceIn(0f, 0.5f)
+                },
         ) { page ->
             ZoomableImage(
                 entry = images[page],
@@ -202,9 +230,13 @@ private fun ImageViewerPager(
     }
 }
 
-/** Pinch-to-zoom, drag-to-pan while zoomed, and double-tap to toggle zoom - the pager itself
- *  stops intercepting horizontal drags while [onZoomChanged] reports zoomed-in, so panning a
- *  zoomed photo doesn't accidentally flip to the next one. */
+/**
+ * Pinch-to-zoom, drag-to-pan while zoomed, and double-tap to toggle zoom. Gestures are
+ * handled with a manual pointer loop instead of detectTransformGestures because that
+ * detector consumes single-finger drags too - which would steal horizontal swipes from
+ * the pager and vertical swipes from the dismiss gesture. Here events are only consumed
+ * while actually pinching (2+ pointers) or panning a zoomed-in photo.
+ */
 @Composable
 private fun ZoomableImage(entry: FileEntry, onZoomChanged: (Boolean) -> Unit) {
     var scale by remember(entry.path) { mutableStateOf(1f) }
@@ -228,11 +260,25 @@ private fun ZoomableImage(entry: FileEntry, onZoomChanged: (Boolean) -> Unit) {
                 )
             }
             .pointerInput(entry.path) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(1f, 6f)
-                    scale = newScale
-                    offset = if (newScale <= 1f) Offset.Zero else offset + pan
-                    onZoomChanged(newScale > 1f)
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.count { it.pressed }
+                        if (pressed == 0) break
+                        if (pressed >= 2) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+                            scale = (scale * zoomChange).coerceIn(1f, 6f)
+                            offset = if (scale <= 1f) Offset.Zero else offset + panChange
+                            onZoomChanged(scale > 1f)
+                            event.changes.forEach { it.consume() }
+                        } else if (scale > 1f) {
+                            val panChange = event.calculatePan()
+                            offset += panChange
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
                 }
             }
             .graphicsLayer(

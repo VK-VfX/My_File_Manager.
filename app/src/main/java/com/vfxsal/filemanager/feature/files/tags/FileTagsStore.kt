@@ -36,4 +36,17 @@ object FileTagsStore {
             paths.forEach { path -> if (tag == null) remove(path) else putString(path, tag.name) }
         }.apply()
     }
+
+    /** Carries a tag along when its file is renamed or moved, instead of orphaning it. */
+    fun onPathMoved(context: Context, oldPath: String, newPath: String) {
+        val tag = getTag(context, oldPath) ?: return
+        prefs(context).edit().remove(oldPath).putString(newPath, tag.name).apply()
+    }
+
+    /** Drops tags for deleted/vaulted files so entries don't accumulate forever. */
+    fun onPathsRemoved(context: Context, paths: Collection<String>) {
+        val editor = prefs(context).edit()
+        paths.forEach { editor.remove(it) }
+        editor.apply()
+    }
 }

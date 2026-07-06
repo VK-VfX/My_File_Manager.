@@ -1,11 +1,11 @@
 package com.vfxsal.filemanager.feature.files.viewer
 
 import android.app.Application
-import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.files.browse.SortBy
 import com.vfxsal.filemanager.feature.files.browse.buildFileEntryComparator
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
@@ -46,7 +46,7 @@ class ImageViewerViewModel(application: Application) : AndroidViewModel(applicat
                 val target = File(startPath)
                 val list = when (source) {
                     ImageViewerSource.CATEGORY ->
-                        FileOps.filesByCategory(Environment.getExternalStorageDirectory(), FileCategory.IMAGES)
+                        FileIndex.allFiles().filter { it.category == FileCategory.IMAGES }
                     ImageViewerSource.FOLDER ->
                         FileOps.listChildren(target.parentFile ?: target)
                             .filter { it.category == FileCategory.IMAGES && !it.isDirectory }

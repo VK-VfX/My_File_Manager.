@@ -1,11 +1,15 @@
 package com.vfxsal.filemanager.feature.files.vault
 
 import android.content.Context
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.clean.scan.FileTreeWalker
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 
 /**
  * A private, PIN-gated space for files: moved-in items live in an app-private directory
@@ -22,6 +26,13 @@ object VaultOps {
     private const val PREFS_NAME = "vault_security"
     private const val KEY_PIN_HASH = "pin_hash"
     private const val KEY_PIN_SALT = "pin_salt"
+    private const val KEY_PIN_ITERATIONS = "pin_iterations"
+    private const val KEY_FAILED_ATTEMPTS = "failed_attempts"
+    private const val KEY_LOCKOUT_UNTIL = "lockout_until"
+
+    private const val PBKDF2_ITERATIONS = 50_000
+    private const val MAX_ATTEMPTS_BEFORE_LOCKOUT = 5
+    private const val LOCKOUT_MILLIS = 30_000L
 
     data class VaultEntry(
         val id: String,
@@ -45,23 +56,66 @@ object VaultOps {
 
     fun setPin(context: Context, pin: String) {
         val salt = randomSaltHex()
-        val hash = hashPin(pin, salt)
+        val hash = pbkdf2Hash(pin, salt)
         prefs(context).edit()
             .putString(KEY_PIN_SALT, salt)
             .putString(KEY_PIN_HASH, hash)
+            .putInt(KEY_PIN_ITERATIONS, PBKDF2_ITERATIONS)
             .apply()
     }
 
+    /**
+     * PINs set before v4.2 were stored as a single-round salted SHA-256; new ones use
+     * PBKDF2 with [PBKDF2_ITERATIONS] rounds. A successful legacy verification silently
+     * re-stores the PIN in the new format, so old vaults migrate on their next unlock.
+     */
     fun verifyPin(context: Context, pin: String): Boolean {
         val salt = prefs(context).getString(KEY_PIN_SALT, null) ?: return false
         val expectedHash = prefs(context).getString(KEY_PIN_HASH, null) ?: return false
-        return hashPin(pin, salt) == expectedHash
+        val iterations = prefs(context).getInt(KEY_PIN_ITERATIONS, 0)
+        return if (iterations > 0) {
+            pbkdf2Hash(pin, salt) == expectedHash
+        } else {
+            val matched = legacySha256Hash(pin, salt) == expectedHash
+            if (matched) setPin(context, pin)
+            matched
+        }
+    }
+
+    // --- Brute-force lockout -------------------------------------------------------------
+
+    fun lockoutRemainingMs(context: Context): Long =
+        (prefs(context).getLong(KEY_LOCKOUT_UNTIL, 0L) - System.currentTimeMillis()).coerceAtLeast(0L)
+
+    fun recordFailedAttempt(context: Context) {
+        val failed = prefs(context).getInt(KEY_FAILED_ATTEMPTS, 0) + 1
+        if (failed >= MAX_ATTEMPTS_BEFORE_LOCKOUT) {
+            prefs(context).edit()
+                .putInt(KEY_FAILED_ATTEMPTS, 0)
+                .putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + LOCKOUT_MILLIS)
+                .apply()
+        } else {
+            prefs(context).edit().putInt(KEY_FAILED_ATTEMPTS, failed).apply()
+        }
+    }
+
+    fun clearFailedAttempts(context: Context) {
+        prefs(context).edit()
+            .putInt(KEY_FAILED_ATTEMPTS, 0)
+            .putLong(KEY_LOCKOUT_UNTIL, 0L)
+            .apply()
     }
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private fun hashPin(pin: String, saltHex: String): String {
+    private fun pbkdf2Hash(pin: String, saltHex: String): String {
+        val spec = PBEKeySpec(pin.toCharArray(), hexToBytes(saltHex), PBKDF2_ITERATIONS, 256)
+        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        return factory.generateSecret(spec).encoded.joinToString(separator = "") { "%02x".format(it) }
+    }
+
+    private fun legacySha256Hash(pin: String, saltHex: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(hexToBytes(saltHex))
         return digest.digest(pin.toByteArray(Charsets.UTF_8)).joinToString(separator = "") { "%02x".format(it) }
@@ -92,6 +146,8 @@ object VaultOps {
             }
             if (moved) {
                 appendManifestEntry(context, VaultEntry(id, originalPath, System.currentTimeMillis(), isDirectory, sizeBytes))
+                FileTagsStore.onPathsRemoved(context, listOf(originalPath))
+                FileIndex.invalidate()
             }
             moved
         } catch (e: Exception) {
@@ -117,7 +173,10 @@ object VaultOps {
                 source.copyRecursively(dest, overwrite = false)
                 source.deleteRecursively()
             }
-            if (restored) removeManifestEntry(context, entry.id)
+            if (restored) {
+                removeManifestEntry(context, entry.id)
+                FileIndex.invalidate()
+            }
             restored
         } catch (e: Exception) {
             false

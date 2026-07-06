@@ -26,14 +26,17 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build debug and release APKs
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: whatfiles-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: whatfiles-apks
+          path: app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
       - name: Read version name
@@ -47,6 +50,8 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.name }}
           name: WhatFiles? v${{ steps.version.outputs.name }}
-          files: app/build/outputs/apk/debug/*.apk
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
           generate_release_notes: true
           make_latest: true

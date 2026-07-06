@@ -6,7 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
-import com.vfxsal.filemanager.feature.files.util.FileOps
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.util.FormatUtils
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.StorageStatsUtils
@@ -56,14 +56,9 @@ class FilesHomeViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private fun computeState(): FilesHomeUiState {
+    private suspend fun computeState(): FilesHomeUiState {
         val root = Environment.getExternalStorageDirectory()
-        val allFiles = mutableListOf<FileEntry>()
-        root.walkTopDown().forEach { file ->
-            if (file.isFile) {
-                runCatching { FileEntry.from(file) }.getOrNull()?.let { allFiles.add(it) }
-            }
-        }
+        val allFiles = FileIndex.allFiles()
         val summaries = FileCategory.entries
             .filter { it != FileCategory.FOLDER && it != FileCategory.OTHER }
             .map { category ->
@@ -72,12 +67,8 @@ class FilesHomeViewModel(application: Application) : AndroidViewModel(applicatio
             }
         val recent = allFiles.sortedByDescending { it.lastModified }.take(20)
 
-        val downloadsDir = File(root, "Download")
-        val downloadFiles = if (downloadsDir.isDirectory) {
-            FileOps.scanRecursive(downloadsDir).filterNot { it.isDirectory }
-        } else {
-            emptyList()
-        }
+        val downloadsPrefix = File(root, "Download").absolutePath + File.separator
+        val downloadFiles = allFiles.filter { it.path.startsWith(downloadsPrefix) }
 
         return FilesHomeUiState(
             isLoading = false,

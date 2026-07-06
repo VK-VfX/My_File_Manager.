@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.data.FileIndex
+import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.BatchRenameOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
@@ -156,15 +158,25 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         val parent = File(_uiState.value.path)
         viewModelScope.launch {
             val success = withContext(Dispatchers.IO) { File(parent, name).mkdir() }
-            if (success) fetchChildren()
+            if (success) {
+                FileIndex.invalidate()
+                fetchChildren()
+            }
             onResult(success)
         }
     }
 
     fun renameEntry(entry: FileEntry, newName: String, onResult: (Boolean) -> Unit) {
+        val context = getApplication<Application>()
         viewModelScope.launch {
             val success = withContext(Dispatchers.IO) {
-                entry.file.renameTo(File(entry.file.parentFile, newName))
+                val dest = File(entry.file.parentFile, newName)
+                val renamed = entry.file.renameTo(dest)
+                if (renamed) {
+                    FileTagsStore.onPathMoved(context, entry.path, dest.absolutePath)
+                    FileIndex.invalidate()
+                }
+                renamed
             }
             clearSelection()
             if (success) fetchChildren()
@@ -208,6 +220,7 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
             val dest = FileOps.uniqueDestination(targetDir, destName)
             val success = withContext(Dispatchers.IO) { ZipOps.zip(entries.map { it.file }, dest) }
             if (success) {
+                FileIndex.invalidate()
                 clearSelection()
                 fetchChildren()
             }
@@ -228,12 +241,18 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
 
     fun renameSelected(baseName: String, pattern: RenamePattern, onResult: (Int) -> Unit) {
         val entries = _uiState.value.entries.filter { it.path in _uiState.value.selectedPaths }
+        val context = getApplication<Application>()
         viewModelScope.launch {
             val renamed = withContext(Dispatchers.IO) {
-                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern)
+                BatchRenameOps.rename(entries.map { it.file }, baseName, pattern) { oldPath, newPath ->
+                    FileTagsStore.onPathMoved(context, oldPath, newPath)
+                }
             }
             clearSelection()
-            if (renamed > 0) fetchChildren()
+            if (renamed > 0) {
+                FileIndex.invalidate()
+                fetchChildren()
+            }
             onResult(renamed)
         }
     }

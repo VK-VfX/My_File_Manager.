@@ -34,16 +34,26 @@ object UpdateChecker {
         val json = JSONObject(body)
         val tag = json.optString("tag_name").removePrefix("v")
         val assets = json.optJSONArray("assets")
+        // Releases carry both a debug and a minified release APK. Installed copies of this
+        // app are debug-signed with the ".debug" application id, so OTA updates must keep
+        // serving the debug asset - the release APK is a different app id and would install
+        // side-by-side instead of updating. Fall back to any .apk if naming ever changes.
         var apkUrl: String? = null
+        var fallbackApkUrl: String? = null
         if (assets != null) {
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
-                if (asset.optString("name").endsWith(".apk")) {
-                    apkUrl = asset.optString("browser_download_url")
-                    break
+                val name = asset.optString("name")
+                if (name.endsWith(".apk")) {
+                    if (name.contains("debug")) {
+                        apkUrl = asset.optString("browser_download_url")
+                        break
+                    }
+                    if (fallbackApkUrl == null) fallbackApkUrl = asset.optString("browser_download_url")
                 }
             }
         }
+        if (apkUrl == null) apkUrl = fallbackApkUrl
 
         if (tag.isBlank() || apkUrl == null) {
             null

@@ -2,13 +2,12 @@ package com.vfxsal.filemanager.feature.files.timeline
 
 import android.app.Application
 import android.net.Uri
-import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.files.util.BackupOps
-import com.vfxsal.filemanager.feature.files.util.FileOps
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -54,9 +53,9 @@ class TimelineViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun computeState(): TimelineUiState {
-        val root = Environment.getExternalStorageDirectory()
-        val media = (FileOps.filesByCategory(root, FileCategory.IMAGES) + FileOps.filesByCategory(root, FileCategory.VIDEOS))
+    private suspend fun computeState(): TimelineUiState {
+        val media = FileIndex.allFiles()
+            .filter { it.category == FileCategory.IMAGES || it.category == FileCategory.VIDEOS }
             .sortedByDescending { it.lastModified }
 
         val today = Calendar.getInstance()

@@ -53,19 +53,19 @@ fun SettingsScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
             SettingsSectionHeader("Appearance")
-            ThemeModeOption(
+            SettingsRadioRow(
                 label = ThemeMode.SYSTEM.label,
                 description = "Follow the device's light/dark setting",
                 selected = uiState.themeMode == ThemeMode.SYSTEM,
                 onClick = { settingsViewModel.setThemeMode(ThemeMode.SYSTEM) },
             )
-            ThemeModeOption(
+            SettingsRadioRow(
                 label = ThemeMode.LIGHT.label,
                 description = "Always use the light theme",
                 selected = uiState.themeMode == ThemeMode.LIGHT,
                 onClick = { settingsViewModel.setThemeMode(ThemeMode.LIGHT) },
             )
-            ThemeModeOption(
+            SettingsRadioRow(
                 label = ThemeMode.DARK.label,
                 description = "Always use the pitch-black AMOLED theme",
                 selected = uiState.themeMode == ThemeMode.DARK,
@@ -77,6 +77,18 @@ fun SettingsScreen(
                     subtitle = "Tint the app with colors from your wallpaper instead of the default palette",
                     checked = uiState.dynamicColor,
                     onCheckedChange = { settingsViewModel.setDynamicColor(it) },
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            SettingsSectionHeader("Storage")
+            SettingsStore.TRASH_RETENTION_OPTIONS.forEach { days ->
+                SettingsRadioRow(
+                    label = "Keep trash for $days days",
+                    description = "Recycle bin items older than $days days are deleted automatically",
+                    selected = uiState.trashRetentionDays == days,
+                    onClick = { settingsViewModel.setTrashRetentionDays(days) },
                 )
             }
 
@@ -105,7 +117,7 @@ private fun SettingsSectionHeader(title: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ThemeModeOption(
+private fun SettingsRadioRow(
     label: String,
     description: String,
     selected: Boolean,

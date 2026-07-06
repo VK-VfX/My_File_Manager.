@@ -13,8 +13,15 @@ object BatchRenameOps {
      * Renames [files] in place using [baseName] plus a numeric or date suffix, preserving each
      * file's extension. [files] should already be in the order the user wants numbered/dated -
      * callers pass the currently displayed (sorted) order. Returns how many were renamed.
+     * [onRenamed] fires with the old and new absolute paths for each success, so callers can
+     * carry along path-keyed metadata like color tags.
      */
-    fun rename(files: List<File>, baseName: String, pattern: RenamePattern): Int {
+    fun rename(
+        files: List<File>,
+        baseName: String,
+        pattern: RenamePattern,
+        onRenamed: (oldPath: String, newPath: String) -> Unit = { _, _ -> },
+    ): Int {
         var renamed = 0
         files.forEachIndexed { index, file ->
             val parent = file.parentFile ?: return@forEachIndexed
@@ -28,7 +35,10 @@ object BatchRenameOps {
             }
             val newName = if (ext.isNotEmpty()) "$baseName$suffix.$ext" else "$baseName$suffix"
             val dest = FileOps.uniqueDestination(parent, newName)
-            if (file.renameTo(dest)) renamed++
+            if (file.renameTo(dest)) {
+                renamed++
+                onRenamed(file.absolutePath, dest.absolutePath)
+            }
         }
         return renamed
     }

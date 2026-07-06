@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.vfxsal.filemanager.data.FileEntry
+import com.vfxsal.filemanager.data.FileIndex
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
 import com.vfxsal.filemanager.feature.files.trash.TrashOps
 import com.vfxsal.filemanager.feature.files.util.FileOps
@@ -136,6 +137,8 @@ fun FileActionsHost(
                     val target = File(entry.file.parentFile, newName)
                     val success = withContext(Dispatchers.IO) { entry.file.renameTo(target) }
                     if (success) {
+                        FileTagsStore.onPathMoved(context, entry.path, target.absolutePath)
+                        FileIndex.invalidate()
                         onChanged()
                     } else {
                         snackbarHostState.showSnackbar("Rename failed")

@@ -1,11 +1,10 @@
 package com.vfxsal.filemanager.feature.files.search
 
 import android.app.Application
-import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileEntry
-import com.vfxsal.filemanager.feature.clean.scan.FileTreeWalker
+import com.vfxsal.filemanager.data.FileIndex
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -23,7 +22,6 @@ data class GlobalSearchUiState(
 )
 
 private const val DEBOUNCE_MILLIS = 300L
-private const val RESULT_BATCH_SIZE = 15
 
 class GlobalSearchViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -41,30 +39,14 @@ class GlobalSearchViewModel(application: Application) : AndroidViewModel(applica
         }
         searchJob = viewModelScope.launch {
             delay(DEBOUNCE_MILLIS)
-            _uiState.update { it.copy(isSearching = true, results = emptyList()) }
-            val root = Environment.getExternalStorageDirectory()
-            val matches = mutableListOf<FileEntry>()
-            withContext(Dispatchers.IO) {
-                FileTreeWalker.walk(
-                    root = root,
-                    onFile = { file ->
-                        if (file.name.contains(query, ignoreCase = true)) {
-                            runCatching { FileEntry.from(file) }.getOrNull()?.let { entry ->
-                                matches.add(entry)
-                                if (matches.size % RESULT_BATCH_SIZE == 0) {
-                                    _uiState.update { it.copy(results = matches.toList()) }
-                                }
-                            }
-                        }
-                    },
-                    onDirectory = { dir, _ ->
-                        if (dir != root && dir.name.contains(query, ignoreCase = true)) {
-                            runCatching { FileEntry.from(dir) }.getOrNull()?.let { matches.add(it) }
-                        }
-                    },
-                )
+            _uiState.update { it.copy(isSearching = true) }
+            // Filtering the shared FileIndex snapshot instead of re-walking the whole tree
+            // per keystroke: the first search after a cold start pays one scan, every
+            // refinement after that is an in-memory filter.
+            val matches = withContext(Dispatchers.IO) {
+                FileIndex.allEntries().filter { it.name.contains(query, ignoreCase = true) }
             }
-            _uiState.update { it.copy(isSearching = false, results = matches.toList()) }
+            _uiState.update { it.copy(isSearching = false, results = matches) }
         }
     }
 }

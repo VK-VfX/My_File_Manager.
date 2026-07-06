@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.update
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = false,
+    val trashRetentionDays: Int = SettingsStore.DEFAULT_TRASH_RETENTION_DAYS,
 )
 
 /** Held at the activity level (not per-screen) so a theme change made from the Settings
@@ -20,6 +21,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         SettingsUiState(
             themeMode = SettingsStore.getThemeMode(application),
             dynamicColor = SettingsStore.getDynamicColor(application),
+            trashRetentionDays = SettingsStore.getTrashRetentionDays(application),
         ),
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -32,5 +34,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setDynamicColor(enabled: Boolean) {
         SettingsStore.setDynamicColor(getApplication(), enabled)
         _uiState.update { it.copy(dynamicColor = enabled) }
+    }
+
+    fun setTrashRetentionDays(days: Int) {
+        SettingsStore.setTrashRetentionDays(getApplication(), days)
+        _uiState.update { it.copy(trashRetentionDays = days) }
     }
 }
