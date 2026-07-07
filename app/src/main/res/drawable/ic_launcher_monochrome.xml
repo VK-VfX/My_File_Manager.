@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome layer for API 33+ themed icons. Same silhouette as
+  ic_launcher_foreground (file glyph + "?" mark); the system applies
+  its own single-color tint on top of this shape.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,29 L62,29 L70,37 L70,79 L38,79 Z" />
+
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M46,44 C46,36 62,36 62,45 C62,52 55,51 55,59" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,70 m-4.5,0 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+</vector>

@@ -2,10 +2,6 @@
 -keep class androidx.media3.session.MediaSessionService { *; }
 -keep class androidx.media3.session.MediaLibraryService { *; }
 
-# Google API client uses reflection for JSON (de)serialization of model classes.
--keepattributes Signature,RuntimeVisibleAnnotations,AnnotationDefault
--keep class com.google.api.services.drive.model.** { *; }
--keep class com.google.api.client.** { *; }
--dontwarn com.google.api.client.**
--dontwarn org.apache.http.**
--dontwarn org.joda.time.**
+# ViewModels are instantiated reflectively by the default ViewModelProvider factory.
+-keep class * extends androidx.lifecycle.ViewModel { <init>(); }
+-keep class * extends androidx.lifecycle.AndroidViewModel { <init>(android.app.Application); }

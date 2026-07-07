@@ -56,12 +56,22 @@ private val DarkColors = darkColorScheme(
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
+    surfaceContainerLowest = DarkSurfaceContainerLowest,
+    surfaceContainerLow = DarkSurfaceContainerLow,
+    surfaceContainer = DarkSurfaceContainer,
+    surfaceContainerHigh = DarkSurfaceContainerHigh,
+    surfaceContainerHighest = DarkSurfaceContainerHighest,
 )
 
+/**
+ * Dynamic (wallpaper-derived) color is off by default: this app's dark theme is a
+ * deliberately curated pitch-black AMOLED look, and per-device dynamic tinting would
+ * fight that by pulling in whatever grey/washed background the system generates.
+ */
 @Composable
 fun FileManagerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
@@ -76,6 +86,7 @@ fun FileManagerTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
+        shapes = AppShapes,
         content = content,
     )
 }

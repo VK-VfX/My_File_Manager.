@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nimbus Files</string>
+    <string name="app_name">WhatFiles?</string>
 
     <string name="nav_files">Files</string>
     <string name="nav_clean">Clean</string>
     <string name="nav_video">Video</string>
     <string name="nav_music">Music</string>
-    <string name="nav_cloud">Cloud</string>
+    <string name="nav_wallpapers">Wallpapers</string>
 
     <string name="notification_channel_playback">Music playback</string>
+
+    <string name="widget_storage_title">Storage</string>
+    <string name="widget_storage_description">Shows free vs. used storage at a glance</string>
 </resources>

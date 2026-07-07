@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -13,11 +12,27 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 14
+        versionName = "4.2.0"
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+
+    signingConfigs {
+        // A fixed, committed debug keystore (not a secret - debug builds are never meant to
+        // be signed with anything sensitive). Without this, Android Gradle Plugin generates a
+        // fresh random ~/.android/debug.keystore on any machine that doesn't already have one -
+        // including every fresh GitHub Actions runner - so each CI build was signed with a
+        // different key and Android refused to install new APKs over the old one without an
+        // uninstall first. Pinning the same keystore here makes every build's signature match,
+        // so new debug APKs install as a seamless update.
+        getByName("debug") {
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
     }
 
@@ -29,10 +44,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Signed with the same committed keystore as debug so release APKs are
+            // installable straight from GitHub Releases (unsigned APKs can't install
+            // at all). This app is personal/sideloaded - the keystore is not a secret.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -73,10 +93,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.documentfile)
 
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
@@ -86,18 +104,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
 
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
-    implementation(libs.play.services.auth)
-
-    implementation(libs.google.api.client.android) {
-        exclude(group = "org.apache.httpcomponents")
-    }
-    implementation(libs.google.api.services.drive) {
-        exclude(group = "org.apache.httpcomponents")
-    }
-    implementation(libs.google.http.client.gson)
-
     implementation(libs.accompanist.permissions)
+
+    testImplementation(libs.junit)
 }

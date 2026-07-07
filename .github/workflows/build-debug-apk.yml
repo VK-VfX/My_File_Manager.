@@ -1,0 +1,57 @@
+name: Build debug APK
+
+on:
+  push:
+    branches:
+      - claude/android-file-manager-media-ab1yii
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build debug and release APKs
+        run: ./gradlew assembleDebug assembleRelease --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: whatfiles-apks
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      - name: Read version name
+        id: version
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.name }}
+          name: WhatFiles? v${{ steps.version.outputs.name }}
+          files: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+          make_latest: true
