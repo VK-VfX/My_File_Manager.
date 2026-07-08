@@ -63,6 +63,10 @@ object WallpaperRenderer {
             WallpaperStyle.DIAGONAL_STRIPES -> drawDiagonalStripes(canvas, w, h, accentA)
             WallpaperStyle.HONEYCOMB -> drawHoneycomb(canvas, w, h, accentA)
             WallpaperStyle.METEOR_SHOWER -> drawMeteorShower(canvas, w, h, accentA, rng)
+            WallpaperStyle.LIGHT_BEAM -> drawLightBeam(canvas, w, h, accentA, rng)
+            WallpaperStyle.PINE_FOREST -> drawPineForest(canvas, w, h, accentA, rng)
+            WallpaperStyle.NEON_SIGN -> drawNeonSign(canvas, w, h, accentA)
+            WallpaperStyle.DARK_VORTEX -> drawDarkVortex(canvas, w, h, accentA)
         }
         return bitmap
     }
@@ -518,6 +522,213 @@ object WallpaperRenderer {
             headPaint.maskFilter = BlurMaskFilter(min(w, h) * 0.015f, BlurMaskFilter.Blur.NORMAL)
             canvas.drawCircle(endX, endY, min(w, h) * 0.006f, headPaint)
         }
+    }
+
+    /**
+     * Alan Wake's flashlight: a soft cone of light narrowing from a bright source near the
+     * top down through the frame, with dust motes drifting in the beam.
+     */
+    private fun drawLightBeam(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
+        val apexX = w * 0.5f
+        val apexY = -h * 0.04f
+        val spread = w * 0.4f
+        val bottomY = h * 1.05f
+
+        val cone = Path()
+        cone.moveTo(apexX, apexY)
+        cone.lineTo(apexX - spread, bottomY)
+        cone.lineTo(apexX + spread, bottomY)
+        cone.close()
+        val beamPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        beamPaint.shader = LinearGradient(
+            apexX, apexY, apexX, bottomY,
+            intArrayOf(colorWithAlpha(accentColor, 200), colorWithAlpha(accentColor, 45), colorWithAlpha(accentColor, 0)),
+            floatArrayOf(0f, 0.55f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        beamPaint.maskFilter = BlurMaskFilter(min(w, h) * 0.05f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawPath(cone, beamPaint)
+
+        // Bright lamp source at the apex.
+        val corePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val coreRadius = min(w, h) * 0.22f
+        corePaint.shader = RadialGradient(
+            apexX, apexY, coreRadius,
+            intArrayOf(colorWithAlpha(accentColor, 255), colorWithAlpha(accentColor, 0)),
+            floatArrayOf(0f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawCircle(apexX, apexY, coreRadius, corePaint)
+
+        // Dust motes floating in the light.
+        repeat(45) {
+            val t = rng.nextFloat()
+            val coneHalfWidth = spread * t
+            val x = apexX + (rng.nextFloat() - 0.5f) * 2f * coneHalfWidth * 0.85f
+            val y = apexY + t * (bottomY - apexY)
+            val radius = min(w, h) * (0.0012f + rng.nextFloat() * 0.002f)
+            val motePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            motePaint.color = colorWithAlpha(accentColor, (60 + rng.nextFloat() * 150).toInt())
+            motePaint.maskFilter = BlurMaskFilter(radius * 2f, BlurMaskFilter.Blur.NORMAL)
+            canvas.drawCircle(x, y, radius, motePaint)
+        }
+    }
+
+    /**
+     * Bright Falls at night: a low glow at the treeline with tiered pine silhouettes
+     * marching across the foreground, receding into mist.
+     */
+    private fun drawPineForest(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
+        val horizonY = h * 0.72f
+
+        // Ambient glow behind the treeline.
+        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        glowPaint.shader = RadialGradient(
+            w * 0.5f, horizonY, w * 0.7f,
+            intArrayOf(colorWithAlpha(accentColor, 130), colorWithAlpha(accentColor, 30), colorWithAlpha(accentColor, 0)),
+            floatArrayOf(0f, 0.5f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), glowPaint)
+
+        // A faint mist band just above the trees.
+        val mistPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        mistPaint.shader = LinearGradient(
+            0f, horizonY - h * 0.12f, 0f, horizonY,
+            intArrayOf(colorWithAlpha(accentColor, 0), colorWithAlpha(accentColor, 55)),
+            floatArrayOf(0f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, horizonY - h * 0.12f, w.toFloat(), horizonY, mistPaint)
+
+        val treePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        treePaint.color = AndroidColor.BLACK
+        val treeCount = 15
+        for (i in 0..treeCount) {
+            val cx = w.toFloat() * i / treeCount + (rng.nextFloat() - 0.5f) * w * 0.05f
+            val treeH = h * (0.20f + rng.nextFloat() * 0.16f)
+            val treeW = treeH * (0.28f + rng.nextFloat() * 0.06f)
+            drawPine(canvas, cx, horizonY, treeH, treeW, treePaint)
+        }
+    }
+
+    /** A single tiered pine silhouette: three overlapping triangles from apex to base. */
+    private fun drawPine(canvas: Canvas, cx: Float, baseY: Float, treeH: Float, treeW: Float, paint: Paint) {
+        val apexY = baseY - treeH
+        val tiers = 3
+        for (t in 0 until tiers) {
+            val tierApexY = apexY + treeH * (t * 0.28f)
+            val tierBaseY = apexY + treeH * (0.45f + t * 0.275f)
+            val halfW = treeW * (0.45f + t * 0.28f)
+            val path = Path()
+            path.moveTo(cx, tierApexY)
+            path.lineTo(cx - halfW, tierBaseY)
+            path.lineTo(cx + halfW, tierBaseY)
+            path.close()
+            canvas.drawPath(path, paint)
+        }
+        // Trunk.
+        val trunk = RectF(cx - treeW * 0.08f, baseY - treeH * 0.1f, cx + treeW * 0.08f, baseY)
+        canvas.drawRect(trunk, paint)
+    }
+
+    /**
+     * Wet-street neon like the Oceanview Hotel: a glowing rounded-rectangle sign tube with a
+     * buzzing crossbar, and its reflection smeared on the ground below.
+     */
+    private fun drawNeonSign(canvas: Canvas, w: Int, h: Int, accentColor: Int) {
+        val cx = w * 0.5f
+        val cy = h * 0.4f
+        val rw = w * 0.32f
+        val rh = rw * 0.6f
+        val corner = min(w, h) * 0.04f
+        val rect = RectF(cx - rw, cy - rh, cx + rw, cy + rh)
+
+        // Outer glow halo.
+        val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+        glow.color = colorWithAlpha(accentColor, 255)
+        glow.style = Paint.Style.STROKE
+        glow.strokeWidth = rw * 0.05f
+        glow.maskFilter = BlurMaskFilter(rw * 0.14f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawRoundRect(rect, corner, corner, glow)
+
+        // Sharp tube.
+        val tube = Paint(Paint.ANTI_ALIAS_FLAG)
+        tube.color = colorWithAlpha(accentColor, 255)
+        tube.style = Paint.Style.STROKE
+        tube.strokeWidth = rw * 0.018f
+        canvas.drawRoundRect(rect, corner, corner, tube)
+
+        // Buzzing crossbar.
+        val bar = Paint(Paint.ANTI_ALIAS_FLAG)
+        bar.color = colorWithAlpha(accentColor, 220)
+        bar.style = Paint.Style.STROKE
+        bar.strokeWidth = rw * 0.02f
+        bar.strokeCap = Paint.Cap.ROUND
+        bar.maskFilter = BlurMaskFilter(rw * 0.03f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawLine(cx - rw * 0.55f, cy, cx + rw * 0.55f, cy, bar)
+
+        // Reflection on the wet ground below.
+        val reflectTop = cy + rh + rh * 0.4f
+        val reflect = Paint(Paint.ANTI_ALIAS_FLAG)
+        reflect.shader = LinearGradient(
+            0f, reflectTop, 0f, reflectTop + rh * 1.4f,
+            intArrayOf(colorWithAlpha(accentColor, 90), colorWithAlpha(accentColor, 0)),
+            floatArrayOf(0f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(cx - rw, reflectTop, cx + rw, reflectTop + rh * 1.4f, reflect)
+    }
+
+    /**
+     * The Dark Place: a tight red spiral descending into a central glow, the recurring
+     * symbol of Alan Wake's manuscript loop.
+     */
+    private fun drawDarkVortex(canvas: Canvas, w: Int, h: Int, accentColor: Int) {
+        val cx = w * 0.5f
+        val cy = h * 0.44f
+
+        // Central red glow pulling everything inward.
+        val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+        glow.shader = RadialGradient(
+            cx, cy, min(w, h) * 0.55f,
+            intArrayOf(colorWithAlpha(accentColor, 150), colorWithAlpha(accentColor, 30), colorWithAlpha(accentColor, 0)),
+            floatArrayOf(0f, 0.45f, 1f),
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), glow)
+
+        // Descent spiral.
+        val maxRadius = min(w, h) * 0.46f
+        val turns = 6.0
+        val steps = 640
+        val path = Path()
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val angle = t * turns * 2 * Math.PI
+            val radius = maxRadius * t
+            val x = cx + (radius * cos(angle)).toFloat()
+            val y = cy + (radius * sin(angle)).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        val spiralGlow = Paint(Paint.ANTI_ALIAS_FLAG)
+        spiralGlow.color = colorWithAlpha(accentColor, 230)
+        spiralGlow.style = Paint.Style.STROKE
+        spiralGlow.strokeWidth = maxRadius * 0.012f
+        spiralGlow.maskFilter = BlurMaskFilter(maxRadius * 0.03f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawPath(path, spiralGlow)
+
+        val spiralSharp = Paint(Paint.ANTI_ALIAS_FLAG)
+        spiralSharp.color = colorWithAlpha(accentColor, 255)
+        spiralSharp.style = Paint.Style.STROKE
+        spiralSharp.strokeWidth = maxRadius * 0.004f
+        canvas.drawPath(path, spiralSharp)
+
+        // Bright core.
+        val core = Paint(Paint.ANTI_ALIAS_FLAG)
+        core.color = colorWithAlpha(accentColor, 255)
+        core.maskFilter = BlurMaskFilter(min(w, h) * 0.03f, BlurMaskFilter.Blur.NORMAL)
+        canvas.drawCircle(cx, cy, min(w, h) * 0.015f, core)
     }
 
     private fun colorWithAlpha(baseColor: Int, alpha: Int): Int =
