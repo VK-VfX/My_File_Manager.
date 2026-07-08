@@ -151,7 +151,7 @@ object WallpaperRenderer {
     }
 
     private fun drawParticles(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
-        repeat(90) {
+        repeat(scaledCount(w, h, 90)) {
             val x = rng.nextFloat() * w
             val y = rng.nextFloat() * h
             val radius = rng.nextFloat() * min(w, h) * 0.006f + min(w, h) * 0.002f
@@ -202,7 +202,7 @@ object WallpaperRenderer {
     }
 
     private fun drawConstellation(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
-        val pointCount = 26
+        val pointCount = scaledCount(w, h, 26)
         val points = List(pointCount) { PointF(rng.nextFloat() * w, rng.nextFloat() * h) }
         val maxLinkDist = min(w, h) * 0.18f
         val linkPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -396,7 +396,7 @@ object WallpaperRenderer {
     }
 
     private fun drawNebulaCloud(canvas: Canvas, w: Int, h: Int, accentA: Int, accentB: Int, rng: Random) {
-        repeat(5) { index ->
+        repeat(scaledCount(w, h, 5)) { index ->
             val cx = rng.nextFloat() * w
             val cy = rng.nextFloat() * h * 0.8f
             val radius = min(w, h) * (0.2f + rng.nextFloat() * 0.25f)
@@ -413,7 +413,7 @@ object WallpaperRenderer {
     }
 
     private fun drawStarfieldDrift(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
-        repeat(160) {
+        repeat(scaledCount(w, h, 160)) {
             val x = rng.nextFloat() * w
             val y = rng.nextFloat() * h
             val isBright = rng.nextFloat() > 0.92f
@@ -437,7 +437,7 @@ object WallpaperRenderer {
         var x = rng.nextFloat() * w
         var y = rng.nextFloat() * h
         canvas.drawCircle(x, y, min(w, h) * 0.006f, dotPaint)
-        repeat(9) {
+        repeat(scaledCount(w, h, 9)) {
             val nextX = rng.nextFloat() * w
             val nextY = rng.nextFloat() * h
             canvas.drawLine(x, y, nextX, y, linePaint)
@@ -497,7 +497,7 @@ object WallpaperRenderer {
     }
 
     private fun drawMeteorShower(canvas: Canvas, w: Int, h: Int, accentColor: Int, rng: Random) {
-        repeat(8) {
+        repeat(scaledCount(w, h, 8)) {
             val startX = rng.nextFloat() * w
             val startY = rng.nextFloat() * h * 0.6f
             val length = min(w, h) * (0.15f + rng.nextFloat() * 0.2f)
@@ -561,7 +561,7 @@ object WallpaperRenderer {
         canvas.drawCircle(apexX, apexY, coreRadius, corePaint)
 
         // Dust motes floating in the light.
-        repeat(45) {
+        repeat(scaledCount(w, h, 45)) {
             val t = rng.nextFloat()
             val coneHalfWidth = spread * t
             val x = apexX + (rng.nextFloat() - 0.5f) * 2f * coneHalfWidth * 0.85f
@@ -603,7 +603,7 @@ object WallpaperRenderer {
 
         val treePaint = Paint(Paint.ANTI_ALIAS_FLAG)
         treePaint.color = AndroidColor.BLACK
-        val treeCount = 15
+        val treeCount = scaledCount(w, h, 15)
         for (i in 0..treeCount) {
             val cx = w.toFloat() * i / treeCount + (rng.nextFloat() - 0.5f) * w * 0.05f
             val treeH = h * (0.20f + rng.nextFloat() * 0.16f)
@@ -729,6 +729,16 @@ object WallpaperRenderer {
         core.color = colorWithAlpha(accentColor, 255)
         core.maskFilter = BlurMaskFilter(min(w, h) * 0.03f, BlurMaskFilter.Blur.NORMAL)
         canvas.drawCircle(cx, cy, min(w, h) * 0.015f, core)
+    }
+
+    // Baseline area the fixed element counts were tuned for; higher-resolution renders
+    // scale their detail up from here so a 4K wallpaper looks rich instead of sparse.
+    private const val BASELINE_AREA = 1080L * 2160L
+
+    /** Scales a baseline element count by how much bigger this render is than the baseline. */
+    private fun scaledCount(w: Int, h: Int, base: Int): Int {
+        val factor = sqrt((w.toLong() * h).toFloat() / BASELINE_AREA)
+        return (base * factor).toInt().coerceAtLeast(base)
     }
 
     private fun colorWithAlpha(baseColor: Int, alpha: Int): Int =

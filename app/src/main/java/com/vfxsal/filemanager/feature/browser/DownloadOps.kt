@@ -18,6 +18,7 @@ object DownloadOps {
 
     private const val PREFS_NAME = "browser_downloads"
     private const val KEY_IDS = "download_ids"
+    private const val URL_PREFS_NAME = "browser_download_urls"
 
     data class DownloadInfo(
         val id: Long,
@@ -33,11 +34,14 @@ object DownloadOps {
                 status == DownloadManager.STATUS_PENDING ||
                 status == DownloadManager.STATUS_PAUSED
         val isSuccessful: Boolean get() = status == DownloadManager.STATUS_SUCCESSFUL
+        val isFailed: Boolean get() = status == DownloadManager.STATUS_FAILED
         val progressFraction: Float
             get() = if (bytesTotal > 0) (bytesDownloaded.toFloat() / bytesTotal).coerceIn(0f, 1f) else 0f
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private fun urlPrefs(context: Context) = context.getSharedPreferences(URL_PREFS_NAME, Context.MODE_PRIVATE)
 
     private fun downloadManager(context: Context): DownloadManager =
         context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
@@ -64,8 +68,17 @@ object DownloadOps {
         }
         val id = downloadManager(context).enqueue(request)
         rememberId(context, id)
+        // Remember the source URL so a failed download can be retried.
+        urlPrefs(context).edit().putString(id.toString(), url).apply()
         id
     }.getOrNull()
+
+    /** Re-enqueues the original URL behind a (usually failed) download, then drops the old row. */
+    fun retry(context: Context, id: Long): Long? {
+        val url = urlPrefs(context).getString(id.toString(), null) ?: return null
+        remove(context, id)
+        return enqueue(context, url)
+    }
 
     /** Current state of every download this app has started, newest first. */
     fun list(context: Context): List<DownloadInfo> {
@@ -108,6 +121,7 @@ object DownloadOps {
     fun remove(context: Context, id: Long) {
         runCatching { downloadManager(context).remove(id) }
         storeIds(context, storedIds(context).filterNot { it == id })
+        urlPrefs(context).edit().remove(id.toString()).apply()
     }
 
     fun openDownloadedFileUri(context: Context, id: Long): Uri? =

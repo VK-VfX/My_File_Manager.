@@ -2,22 +2,23 @@ package com.vfxsal.filemanager.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// v4.0 brand seed: vivid violet with a mint accent - a fresher identity than the old
-// indigo/coral, while the dark theme keeps the signature pure-black AMOLED surfaces below.
-val Primary = Color(0xFF6C4DF0)
+// v4.6 "Aurora" brand seed: an electric azure primary paired with a warm rose accent -
+// a brighter, fresher identity than the v4.0 violet/mint, while the dark theme keeps the
+// signature pure-black AMOLED surfaces below.
+val Primary = Color(0xFF2563EB)
 val OnPrimary = Color(0xFFFFFFFF)
-val PrimaryContainer = Color(0xFFE7DEFF)
-val OnPrimaryContainer = Color(0xFF20005E)
+val PrimaryContainer = Color(0xFFDBE4FF)
+val OnPrimaryContainer = Color(0xFF001A43)
 
-val Secondary = Color(0xFF615B71)
+val Secondary = Color(0xFF565E71)
 val OnSecondary = Color(0xFFFFFFFF)
-val SecondaryContainer = Color(0xFFE8DEF8)
-val OnSecondaryContainer = Color(0xFF1E192B)
+val SecondaryContainer = Color(0xFFDAE2F9)
+val OnSecondaryContainer = Color(0xFF131B2C)
 
-val Tertiary = Color(0xFF0E9E8B)
+val Tertiary = Color(0xFFB5245F)
 val OnTertiary = Color(0xFFFFFFFF)
-val TertiaryContainer = Color(0xFFB6F1E4)
-val OnTertiaryContainer = Color(0xFF00201A)
+val TertiaryContainer = Color(0xFFFFD9E2)
+val OnTertiaryContainer = Color(0xFF3E001D)
 
 val Error = Color(0xFFBA1A1A)
 val OnError = Color(0xFFFFFFFF)
@@ -32,20 +33,20 @@ val SurfaceVariant = Color(0xFFE7E0EC)
 val OnSurfaceVariant = Color(0xFF49454F)
 val Outline = Color(0xFF7A757F)
 
-val DarkPrimary = Color(0xFFCDBDFF)
-val DarkOnPrimary = Color(0xFF371A94)
-val DarkPrimaryContainer = Color(0xFF5233C4)
-val DarkOnPrimaryContainer = Color(0xFFE7DEFF)
+val DarkPrimary = Color(0xFFAEC6FF)
+val DarkOnPrimary = Color(0xFF002E6B)
+val DarkPrimaryContainer = Color(0xFF1B47B8)
+val DarkOnPrimaryContainer = Color(0xFFDBE4FF)
 
-val DarkSecondary = Color(0xFFCBC3DC)
-val DarkOnSecondary = Color(0xFF332D41)
-val DarkSecondaryContainer = Color(0xFF4A4458)
-val DarkOnSecondaryContainer = Color(0xFFE8DEF8)
+val DarkSecondary = Color(0xFFBEC6DC)
+val DarkOnSecondary = Color(0xFF283041)
+val DarkSecondaryContainer = Color(0xFF3E4759)
+val DarkOnSecondaryContainer = Color(0xFFDAE2F9)
 
-val DarkTertiary = Color(0xFF54DBC8)
-val DarkOnTertiary = Color(0xFF003730)
-val DarkTertiaryContainer = Color(0xFF005048)
-val DarkOnTertiaryContainer = Color(0xFFB6F1E4)
+val DarkTertiary = Color(0xFFFFB1C8)
+val DarkOnTertiary = Color(0xFF5E1133)
+val DarkTertiaryContainer = Color(0xFF7B294A)
+val DarkOnTertiaryContainer = Color(0xFFFFD9E2)
 
 // True AMOLED black: background/surface are pure #000000 so OLED panels turn those
 // pixels fully off. The surfaceContainer* tiers step up in tiny increments from black
@@ -68,7 +69,7 @@ val DarkSurfaceContainerHighest = Color(0xFF201F26)
 val CategoryImages = Color(0xFF4CAF50)
 val CategoryVideos = Color(0xFFFF6F5E)
 val CategoryAudio = Color(0xFFAB47BC)
-val CategoryDocuments = Color(0xFF6C4DF0)
+val CategoryDocuments = Color(0xFF2563EB)
 val CategoryApks = Color(0xFF00ACC1)
 val CategoryArchives = Color(0xFFFB8C00)
 val CategoryOther = Color(0xFF757575)

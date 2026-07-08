@@ -29,10 +29,18 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -40,10 +48,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -60,6 +70,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -101,7 +112,15 @@ fun BrowserScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var pendingImageDownload by remember { mutableStateOf<String?>(null) }
     var showMediaSheet by remember { mutableStateOf(false) }
+    var showStartPage by remember { mutableStateOf(true) }
+    var currentPageUrl by remember { mutableStateOf(HOME_URL) }
+    var isBookmarked by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+    fun loadUrl(url: String) {
+        showStartPage = false
+        webViewRef?.loadUrl(url)
+    }
 
     // Media spotted on the current page (network sniffing + DOM scan), newest page only.
     val detectedMedia = remember { mutableStateListOf<DetectedMedia>() }
@@ -141,7 +160,7 @@ fun BrowserScreen(
                             placeholder = { Text("Search or enter address", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                             keyboardActions = KeyboardActions(onGo = {
-                                webViewRef?.loadUrl(normalizeInput(addressText))
+                                loadUrl(normalizeInput(addressText))
                             }),
                         )
                     },
@@ -159,6 +178,18 @@ fun BrowserScreen(
                         }
                         IconButton(onClick = { webViewRef?.reload() }) {
                             Icon(Icons.Filled.Refresh, contentDescription = "Reload page")
+                        }
+                        IconButton(onClick = {
+                            isBookmarked = BrowserStore.toggleBookmark(context, currentPageUrl, addressText)
+                            scope.launch {
+                                snackbarHostState.showSnackbar(if (isBookmarked) "Bookmarked" else "Bookmark removed")
+                            }
+                        }) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                                tint = if (isBookmarked) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
                         }
                         IconButton(onClick = { showMediaSheet = true }, enabled = detectedMedia.isNotEmpty()) {
                             BadgedBox(
@@ -200,7 +231,12 @@ fun BrowserScreen(
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                 isLoading = true
-                                url?.let { addressText = it }
+                                showStartPage = false
+                                url?.let {
+                                    addressText = it
+                                    currentPageUrl = it
+                                    isBookmarked = BrowserStore.isBookmarked(context, it)
+                                }
                                 canGoBack = view?.canGoBack() == true
                                 detectedMedia.clear()
                             }
@@ -208,6 +244,9 @@ fun BrowserScreen(
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 isLoading = false
                                 canGoBack = view?.canGoBack() == true
+                                if (url != null) {
+                                    BrowserStore.recordVisit(context, url, view?.title.orEmpty())
+                                }
                                 // Scan the DOM for video/audio elements whose media hasn't
                                 // been requested over the network yet.
                                 view?.evaluateJavascript(MediaSniffer.COLLECT_PAGE_MEDIA_JS) { result ->
@@ -275,6 +314,18 @@ fun BrowserScreen(
                     }
                 },
             )
+
+            if (showStartPage) {
+                BrowserStartPage(
+                    bookmarks = remember(showStartPage) { BrowserStore.bookmarks(context) },
+                    history = remember(showStartPage) { BrowserStore.history(context) },
+                    onOpenLink = { url ->
+                        addressText = url
+                        loadUrl(url)
+                    },
+                    onClearHistory = { BrowserStore.clearHistory(context) },
+                )
+            }
         }
     }
 
@@ -372,6 +423,164 @@ fun BrowserScreen(
         onDispose {
             webViewRef?.destroy()
             webViewRef = null
+        }
+    }
+}
+
+/**
+ * The new-tab / start panel shown over the WebView before a page is loaded. Surfaces saved
+ * bookmarks and recent history as tappable rows so the browser opens somewhere useful.
+ */
+@Composable
+private fun BrowserStartPage(
+    bookmarks: List<BrowserLink>,
+    history: List<BrowserLink>,
+    onOpenLink: (String) -> Unit,
+    onClearHistory: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp),
+        ) {
+            item {
+                Text(
+                    text = "WhatFiles Browser",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                Text(
+                    text = "Search or type an address above to get started.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+                Spacer(Modifier.height(20.dp))
+            }
+
+            if (bookmarks.isNotEmpty()) {
+                item {
+                    StartSectionHeader(
+                        icon = Icons.Filled.Bookmark,
+                        title = "Bookmarks",
+                    )
+                }
+                items(bookmarks, key = { "bm_" + it.url }) { link ->
+                    StartLinkRow(
+                        link = link,
+                        leadingIcon = Icons.Filled.Language,
+                        onClick = { onOpenLink(link.url) },
+                    )
+                }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
+
+            if (history.isNotEmpty()) {
+                item {
+                    StartSectionHeader(
+                        icon = Icons.Filled.History,
+                        title = "Recent",
+                        trailing = {
+                            TextButton(onClick = onClearHistory) { Text("Clear") }
+                        },
+                    )
+                }
+                items(history, key = { "hs_" + it.url }) { link ->
+                    StartLinkRow(
+                        link = link,
+                        leadingIcon = Icons.Filled.History,
+                        onClick = { onOpenLink(link.url) },
+                    )
+                }
+            }
+
+            if (bookmarks.isEmpty() && history.isEmpty()) {
+                item {
+                    Text(
+                        text = "No bookmarks or history yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StartSectionHeader(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        trailing?.invoke()
+    }
+}
+
+@Composable
+private fun StartLinkRow(
+    link: BrowserLink,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = link.title.ifBlank { link.host },
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = link.host,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

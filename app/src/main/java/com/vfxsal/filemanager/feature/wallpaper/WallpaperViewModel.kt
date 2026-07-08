@@ -31,6 +31,13 @@ import kotlinx.coroutines.withContext
 private const val THUMB_WIDTH = 300
 private const val THUMB_HEIGHT = 600
 
+// Detailed output resolution: at least full-HD-tall (1440 short side) even on low-res
+// panels, and up to 4K (3840 long side) so applied/saved wallpapers stay crisp under the
+// launcher's parallax crop. Rendering is all vector math, so higher res just means more
+// detail, no assets.
+private const val MIN_SHORT_SIDE = 1440
+private const val MAX_LONG_SIDE = 3840
+
 enum class WallpaperTarget { HOME, LOCK, BOTH }
 
 sealed interface WallpaperEvent {
@@ -76,6 +83,33 @@ class WallpaperViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun designFor(id: String): WallpaperDesign? = WallpaperCatalog.designs.firstOrNull { it.id == id }
 
+    /** Target render size: the device's own aspect ratio scaled up so it's crisp and detailed. */
+    private fun renderSize(context: Context): Pair<Int, Int> {
+        val manager = WallpaperManager.getInstance(context)
+        val metrics = context.resources.displayMetrics
+        var width = manager.desiredMinimumWidth.takeIf { it > 0 } ?: metrics.widthPixels
+        var height = manager.desiredMinimumHeight.takeIf { it > 0 } ?: metrics.heightPixels
+        if (width <= 0 || height <= 0) {
+            width = 1440
+            height = 3120
+        }
+        val shortSide = minOf(width, height)
+        // Scale up so the short side is at least MIN_SHORT_SIDE.
+        if (shortSide < MIN_SHORT_SIDE) {
+            val factor = MIN_SHORT_SIDE.toFloat() / shortSide
+            width = (width * factor).toInt()
+            height = (height * factor).toInt()
+        }
+        // Cap the long side at 4K to bound memory.
+        val longSide = maxOf(width, height)
+        if (longSide > MAX_LONG_SIDE) {
+            val factor = MAX_LONG_SIDE.toFloat() / longSide
+            width = (width * factor).toInt()
+            height = (height * factor).toInt()
+        }
+        return width to height
+    }
+
     fun apply(design: WallpaperDesign, target: WallpaperTarget) {
         val context = getApplication<Application>()
         viewModelScope.launch {
@@ -83,8 +117,7 @@ class WallpaperViewModel(application: Application) : AndroidViewModel(applicatio
             val success = withContext(Dispatchers.Default) {
                 runCatching {
                     val manager = WallpaperManager.getInstance(context)
-                    val width = manager.desiredMinimumWidth.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
-                    val height = manager.desiredMinimumHeight.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
+                    val (width, height) = renderSize(context)
                     val bitmap = WallpaperRenderer.render(design, width, height)
                     val flags = when (target) {
                         WallpaperTarget.HOME -> WallpaperManager.FLAG_SYSTEM
@@ -110,9 +143,7 @@ class WallpaperViewModel(application: Application) : AndroidViewModel(applicatio
             _isBusy.value = true
             val success = withContext(Dispatchers.IO) {
                 runCatching {
-                    val manager = WallpaperManager.getInstance(context)
-                    val width = manager.desiredMinimumWidth.takeIf { it > 0 } ?: context.resources.displayMetrics.widthPixels
-                    val height = manager.desiredMinimumHeight.takeIf { it > 0 } ?: context.resources.displayMetrics.heightPixels
+                    val (width, height) = renderSize(context)
                     val bitmap = WallpaperRenderer.render(design, width, height)
                     saveBitmapToGallery(context, bitmap, design.name)
                     bitmap.recycle()

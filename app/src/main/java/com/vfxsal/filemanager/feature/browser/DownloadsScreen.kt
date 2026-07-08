@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -81,6 +82,13 @@ class DownloadsViewModel(application: Application) : AndroidViewModel(applicatio
             _downloads.value = withContext(Dispatchers.IO) { DownloadOps.list(getApplication()) }
         }
     }
+
+    fun retry(id: Long) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { DownloadOps.retry(getApplication(), id) }
+            _downloads.value = withContext(Dispatchers.IO) { DownloadOps.list(getApplication()) }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,6 +140,7 @@ fun DownloadsScreen(
                                 }
                             },
                             onRemove = { viewModel.remove(download.id) },
+                            onRetry = { viewModel.retry(download.id) },
                             modifier = Modifier.animateItem(),
                         )
                     }
@@ -146,6 +155,7 @@ private fun DownloadRow(
     download: DownloadOps.DownloadInfo,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -209,6 +219,15 @@ private fun DownloadRow(
                     text = if (download.status == DownloadManager.STATUS_FAILED) "Failed" else "Waiting…",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        if (download.isFailed) {
+            IconButton(onClick = onRetry) {
+                Icon(
+                    Icons.Filled.Refresh,
+                    contentDescription = "Retry download",
+                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
