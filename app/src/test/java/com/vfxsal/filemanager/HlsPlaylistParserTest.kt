@@ -103,4 +103,21 @@ class HlsPlaylistParserTest {
         val iv = HlsPlaylistParser.ivFromHex("000102030405060708090a0b0c0d0e0f")
         assertArrayEquals(ByteArray(16) { it.toByte() }, iv)
     }
+
+    @Test
+    fun `finds and resolves the fmp4 init segment uri`() {
+        val playlist = """
+            #EXTM3U
+            #EXT-X-MAP:URI="init.mp4"
+            #EXTINF:4.0,
+            seg0.m4s
+        """.trimIndent()
+
+        assertEquals("https://cdn.example.com/stream/init.mp4", HlsPlaylistParser.initSegmentUri(playlist, base))
+    }
+
+    @Test
+    fun `returns null when there is no init segment`() {
+        assertNull(HlsPlaylistParser.initSegmentUri("#EXTM3U\n#EXTINF:4,\nseg0.ts", base))
+    }
 }

@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vfxsal.filemanager.feature.files.components.EmptyState
+import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.util.FormatUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -98,6 +99,7 @@ fun DownloadsScreen(
     viewModel: DownloadsViewModel = viewModel(),
 ) {
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
+    val hlsJobs by HlsDownloadManager.jobs.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -116,12 +118,27 @@ fun DownloadsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (downloads.isEmpty()) {
+            if (downloads.isEmpty() && hlsJobs.isEmpty()) {
                 EmptyState(
                     message = "No downloads yet.\nFiles you download in the browser will appear here.",
                 )
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(hlsJobs, key = { "hls_" + it.id }) { job ->
+                        HlsJobRow(
+                            job = job,
+                            onOpen = {
+                                val file = (job.status as? HlsJobStatus.Done)?.file ?: return@HlsJobRow
+                                runCatching { context.startActivity(FileOps.viewIntent(context, file)) }
+                                    .onFailure {
+                                        scope.launch { snackbarHostState.showSnackbar("No app can open this file") }
+                                    }
+                            },
+                            onCancel = { HlsDownloadManager.cancel(job.id) },
+                            onDismiss = { HlsDownloadManager.dismiss(job.id) },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                     items(downloads, key = { it.id }) { download ->
                         DownloadRow(
                             download = download,
@@ -146,6 +163,87 @@ fun DownloadsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HlsJobRow(
+    job: HlsJob,
+    onOpen: () -> Unit,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Movie, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .then(if (job.status is HlsJobStatus.Done) Modifier.clickable(onClick = onOpen) else Modifier),
+        ) {
+            Text(
+                text = job.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            when (val status = job.status) {
+                is HlsJobStatus.Downloading -> {
+                    Spacer(Modifier.height(6.dp))
+                    if (status.total > 0) {
+                        LinearProgressIndicator(
+                            progress = { status.completed / status.total.toFloat() },
+                            modifier = Modifier.fillMaxWidth().height(6.dp),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "${status.completed} / ${status.total} segments",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(6.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Fetching playlist…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                is HlsJobStatus.Done -> Text(
+                    text = "Done · ${status.file.name} · tap to open",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                is HlsJobStatus.Failed -> Text(
+                    text = "Failed · ${status.message}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        IconButton(onClick = if (job.status is HlsJobStatus.Downloading) onCancel else onDismiss) {
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = if (job.status is HlsJobStatus.Downloading) "Cancel download" else "Remove from list",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

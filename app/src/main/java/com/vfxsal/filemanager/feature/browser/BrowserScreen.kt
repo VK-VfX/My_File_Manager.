@@ -86,8 +86,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vfxsal.filemanager.util.FormatUtils
 import java.net.URLEncoder
 import java.util.UUID
@@ -131,8 +129,6 @@ fun BrowserScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val hlsViewModel: HlsDownloadViewModel = viewModel()
-    val hlsState by hlsViewModel.state.collectAsStateWithLifecycle()
 
     val tabs = remember { mutableStateListOf(BrowserTab(HOME_URL)) }
     var activeTabId by remember { mutableStateOf(tabs.first().id) }
@@ -463,13 +459,20 @@ fun BrowserScreen(
                                 if (media.kind == MediaKind.STREAM) {
                                     // A stream is a playlist of many segment URLs, not one file -
                                     // the system DownloadManager (used for everything else) can
-                                    // only fetch a single URL, so this needs its own engine.
-                                    hlsViewModel.download(
+                                    // only fetch a single URL, so this needs its own engine. It
+                                    // runs in a process-scoped manager (not tied to this screen)
+                                    // so closing the browser doesn't cancel it - progress shows in
+                                    // Downloads, same as every other download.
+                                    HlsDownloadManager.enqueue(
+                                        context = context,
                                         manifestUrl = media.url,
-                                        suggestedFileName = media.fileName.substringBeforeLast('.'),
+                                        suggestedTitle = media.fileName.substringBeforeLast('.'),
                                         userAgent = webViewRef?.settings?.userAgentString,
                                     )
                                     showMediaSheet = false
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Downloading stream - see Downloads for progress")
+                                    }
                                 } else {
                                     startDownload(media.url)
                                 }
@@ -479,46 +482,6 @@ fun BrowserScreen(
                 }
             }
         }
-    }
-
-    LaunchedEffect(hlsState) {
-        when (val s = hlsState) {
-            is HlsDownloadState.Done -> {
-                snackbarHostState.showSnackbar("Saved ${s.file.name} to Downloads")
-                hlsViewModel.dismiss()
-            }
-            is HlsDownloadState.Failed -> {
-                snackbarHostState.showSnackbar("Stream download failed: ${s.message}")
-                hlsViewModel.dismiss()
-            }
-            else -> Unit
-        }
-    }
-
-    (hlsState as? HlsDownloadState.Downloading)?.let { downloading ->
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Downloading stream") },
-            text = {
-                Column {
-                    if (downloading.total > 0) {
-                        LinearProgressIndicator(
-                            progress = { downloading.completed / downloading.total.toFloat() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text("${downloading.completed} / ${downloading.total} segments")
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Spacer(Modifier.height(8.dp))
-                        Text("Fetching playlist…")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { hlsViewModel.cancel() }) { Text("Cancel") }
-            },
-        )
     }
 
     pendingImageDownload?.let { imageUrl ->

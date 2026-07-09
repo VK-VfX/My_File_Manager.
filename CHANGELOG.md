@@ -3,6 +3,23 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.11.0
+
+### Changed — HLS downloads now produce a real, viewable mp4
+- **Converts to `.mp4`** — downloaded streams are now repackaged into a standalone `.mp4` (via
+  Android's built-in `MediaExtractor`/`MediaMuxer`, no re-encoding) instead of being left as a raw
+  `.ts` blob this app's own Video tab didn't recognize and most players handled poorly. If a
+  stream's codec genuinely can't be remuxed, the raw `.ts` is kept as a fallback instead of losing
+  the download.
+- **Handles fMP4/CMAF streams** — many modern HLS streams share one initialization segment
+  (`#EXT-X-MAP`) across all fragments instead of each being a standalone MPEG-TS chunk; the
+  downloader previously ignored this entirely, producing fragments with no codec info that
+  couldn't play. It's now fetched and prepended before merging.
+- **Downloads survive leaving the browser** — stream downloads previously ran on a ViewModel
+  scoped to the browser screen, so closing the browser silently cancelled them mid-download. They
+  now run in a process-wide manager, with live progress and cancel shown in Downloads (a new
+  "streams" section there) instead of a blocking dialog stuck on the browser screen.
+
 ## v4.10.0
 
 ### Changed — Browser can now actually download HLS streams
