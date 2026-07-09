@@ -45,6 +45,20 @@ jobs:
           VERSION_NAME=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
           echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Extract release notes from CHANGELOG
+        run: |
+          VERSION="${{ steps.version.outputs.name }}"
+          # Pull just the section for this version (from "## vX.Y.Z" to the next "## v") so the
+          # in-app updater shows our curated changelog instead of a raw commit list.
+          awk -v hdr="## v$VERSION" '
+            index($0, hdr) == 1 { found = 1; next }
+            found && /^## v/ { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md || true
+          if [ ! -s release_notes.md ]; then
+            echo "See the full changelog in the app or on GitHub." > release_notes.md
+          fi
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -53,5 +67,6 @@ jobs:
           files: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
+          body_path: release_notes.md
           generate_release_notes: true
           make_latest: true

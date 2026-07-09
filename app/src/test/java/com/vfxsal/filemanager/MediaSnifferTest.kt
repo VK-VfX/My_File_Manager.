@@ -27,6 +27,19 @@ class MediaSnifferTest {
     }
 
     @Test
+    fun `classifies HLS and DASH manifests as streams`() {
+        assertEquals(MediaKind.STREAM, MediaSniffer.classify("https://host/live/index.m3u8"))
+        assertEquals(MediaKind.STREAM, MediaSniffer.classify("https://host/dash/manifest.mpd?x=1"))
+    }
+
+    @Test
+    fun `classifies additional video and audio extensions`() {
+        assertEquals(MediaKind.VIDEO, MediaSniffer.classify("https://host/clip.flv"))
+        assertEquals(MediaKind.VIDEO, MediaSniffer.classify("https://host/clip.mpeg"))
+        assertEquals(MediaKind.AUDIO, MediaSniffer.classify("https://host/track.flac"))
+    }
+
+    @Test
     fun `rejects non-http, extensionless and unknown urls`() {
         assertNull(MediaSniffer.classify(null))
         assertNull(MediaSniffer.classify("blob:https://host/uuid"))

@@ -355,6 +355,7 @@ fun BrowserScreen(
                             Icon(
                                 imageVector = when (media.kind) {
                                     MediaKind.VIDEO -> Icons.Filled.Movie
+                                    MediaKind.STREAM -> Icons.Filled.Movie
                                     MediaKind.AUDIO -> Icons.Filled.Audiotrack
                                     MediaKind.FILE -> Icons.Filled.InsertDriveFile
                                 },

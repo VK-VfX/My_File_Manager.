@@ -5,6 +5,7 @@ import android.webkit.MimeTypeMap
 enum class MediaKind(val label: String) {
     VIDEO("Video"),
     AUDIO("Audio"),
+    STREAM("Stream"),
     FILE("File"),
 }
 
@@ -14,53 +15,73 @@ data class DetectedMedia(val url: String, val kind: MediaKind) {
 }
 
 /**
- * Spots downloadable media as a page loads. Two sources feed it: every network request the
- * WebView makes (which catches videos the moment they start buffering) and a post-load DOM
- * scan of `<video>/<audio>/<source>` elements (which catches media that hasn't started
- * loading yet). Blob and DRM/segmented streams can't be saved by DownloadManager, so only
- * plain http(s) URLs with a recognizable file extension are reported.
+ * Spots downloadable media as a page loads. Three sources feed it: every network request the
+ * WebView makes (which catches videos the moment they start buffering), a post-load DOM scan of
+ * `<video>/<audio>/<source>` elements plus `<meta>` player tags and media `<a href>` links
+ * (which catches media that hasn't started loading yet), and long-pressed images. Blob and DRM
+ * streams can't be saved, and HLS/DASH manifests are only playlists (their segments still need
+ * assembling), so those are flagged as [MediaKind.STREAM] rather than promised as direct files.
  */
 object MediaSniffer {
 
-    private val videoExtensions = setOf("mp4", "webm", "mkv", "mov", "avi", "3gp", "m4v")
-    private val audioExtensions = setOf("mp3", "m4a", "aac", "ogg", "opus", "wav", "flac")
+    private val videoExtensions = setOf("mp4", "webm", "mkv", "mov", "avi", "3gp", "m4v", "flv", "ogv", "mpg", "mpeg", "wmv", "ts")
+    private val audioExtensions = setOf("mp3", "m4a", "aac", "ogg", "opus", "wav", "flac", "weba")
+    private val streamExtensions = setOf("m3u8", "mpd", "m4s")
     private val fileExtensions = setOf("pdf", "zip", "rar", "7z", "apk", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub")
+
+    private fun extensionOf(url: String): String =
+        url.substringBefore('?')
+            .substringBefore('#')
+            .substringAfterLast('/')
+            .substringAfterLast('.', "")
+            .lowercase()
 
     /** Returns what kind of downloadable media [url] points at, or null if it isn't one. */
     fun classify(url: String?): MediaKind? {
         if (url == null) return null
         if (!url.startsWith("http://") && !url.startsWith("https://")) return null
-        val extension = url
-            .substringBefore('?')
-            .substringBefore('#')
-            .substringAfterLast('/')
-            .substringAfterLast('.', "")
-            .lowercase()
-        return when {
-            extension in videoExtensions -> MediaKind.VIDEO
-            extension in audioExtensions -> MediaKind.AUDIO
-            extension in fileExtensions -> MediaKind.FILE
+        return when (extensionOf(url)) {
+            in streamExtensions -> MediaKind.STREAM
+            in videoExtensions -> MediaKind.VIDEO
+            in audioExtensions -> MediaKind.AUDIO
+            in fileExtensions -> MediaKind.FILE
             else -> null
         }
     }
 
-    fun mimeTypeFor(url: String): String? {
-        val extension = url
-            .substringBefore('?')
-            .substringBefore('#')
-            .substringAfterLast('.', "")
-            .lowercase()
-        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    fun mimeTypeFor(url: String): String? = when (extensionOf(url)) {
+        "m3u8" -> "application/vnd.apple.mpegurl"
+        "mpd" -> "application/dash+xml"
+        else -> MimeTypeMap.getSingleton().getMimeTypeFromExtension(extensionOf(url))
     }
 
-    /** Collects the sources of every video/audio element on the page as a JSON array. */
+    /**
+     * Collects candidate media URLs from the loaded page as a JSON array: `<video>/<audio>/
+     * <source>` current/`src`/`data-src`, Open Graph & Twitter player `<meta>` tags, and any
+     * `<a href>` that points at a known media/stream/file extension. [classify] filters the
+     * result down to things actually worth offering.
+     */
     const val COLLECT_PAGE_MEDIA_JS = """
         (function() {
             var out = [];
-            var els = document.querySelectorAll('video, audio, source');
-            for (var i = 0; i < els.length; i++) {
-                var src = els[i].currentSrc || els[i].src;
-                if (src) out.push(src);
+            function add(u) { if (u && out.indexOf(u) === -1) out.push(u); }
+            var media = document.querySelectorAll('video, audio, source');
+            for (var i = 0; i < media.length; i++) {
+                add(media[i].currentSrc || media[i].src);
+                add(media[i].getAttribute('data-src'));
+                add(media[i].getAttribute('data-source'));
+            }
+            var metas = document.querySelectorAll(
+                'meta[property="og:video"], meta[property="og:video:url"], ' +
+                'meta[property="og:video:secure_url"], meta[property="og:audio"], ' +
+                'meta[name="twitter:player:stream"]'
+            );
+            for (var j = 0; j < metas.length; j++) { add(metas[j].getAttribute('content')); }
+            var links = document.querySelectorAll('a[href]');
+            var re = /\.(mp4|webm|mkv|mov|m4v|avi|flv|ogv|wmv|mpe?g|mp3|m4a|aac|flac|wav|ogg|opus|m3u8|mpd|ts|zip|rar|7z|apk|pdf|epub|docx?|xlsx?|pptx?)(\?|#|${'$'})/i;
+            for (var k = 0; k < links.length; k++) {
+                var h = links[k].href;
+                if (h && re.test(h)) add(h);
             }
             return JSON.stringify(out);
         })()

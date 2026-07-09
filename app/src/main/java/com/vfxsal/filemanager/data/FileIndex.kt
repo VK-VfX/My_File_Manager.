@@ -1,6 +1,7 @@
 package com.vfxsal.filemanager.data
 
 import android.os.Environment
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -70,6 +71,15 @@ object FileIndex {
         cached = null
     }
 
+    /**
+     * Warms the cache in the background (call once at app startup) so the first screen that
+     * needs the index reads a ready snapshot instead of blocking on a cold walk.
+     */
+    fun prime() {
+        if (cached != null || refreshing) return
+        refreshScope.launch { runCatching { allEntries() } }
+    }
+
     private fun triggerBackgroundRefresh() {
         if (refreshing) return
         refreshing = true
@@ -87,8 +97,20 @@ object FileIndex {
     private fun scan(): List<FileEntry> {
         val root = Environment.getExternalStorageDirectory()
         return root.walkTopDown()
+            // Don't descend into large, mostly-inaccessible or noise trees. Under scoped
+            // storage Android/data and Android/obb are huge and unreadable (walking them is
+            // slow and yields nothing), and thumbnail caches are just churn - pruning these
+            // at the directory level (so their whole subtree is skipped) is the single biggest
+            // scan speedup on real devices.
+            .onEnter { dir -> !shouldSkipDir(dir) }
             .filter { it != root }
             .mapNotNull { runCatching { FileEntry.from(it) }.getOrNull() }
             .toList()
+    }
+
+    private fun shouldSkipDir(dir: File): Boolean {
+        val name = dir.name
+        if (name == ".thumbnails" || name == ".trashed") return true
+        return dir.parentFile?.name == "Android" && (name == "data" || name == "obb")
     }
 }

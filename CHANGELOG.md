@@ -3,6 +3,23 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.8.0
+
+### Changed
+- **Streamlined bottom navigation** — with six tabs, long labels like "Wallpapers" no longer
+  wrap to two lines on devices with wider default fonts (e.g. Pixel); labels are now forced to a
+  single line so the bar looks consistent everywhere.
+- **Faster data scanning** — the storage index is now warmed in the background at app startup,
+  and the scan skips large, mostly-inaccessible trees (`Android/data`, `Android/obb`) and hidden
+  caches, so the first screen loads noticeably quicker on big libraries.
+- **In-app changelog** — the updater now shows the full, scrollable "What's new" notes for the
+  available version, and releases are published with the curated changelog as their notes.
+- **Smarter browser media capture** — the in-app browser now also detects HLS/DASH streams
+  (`.m3u8`/`.mpd`), more video/audio formats, and pulls candidate media from `<meta>` player tags
+  and media links on the page, not just `<video>`/`<audio>` elements and network requests.
+  (HLS/DASH are flagged as "Stream" since their segments still need assembling; live and
+  DRM-protected content can't be captured.)
+
 ## v4.7.0
 
 ### Added — Advanced Productivity Tools

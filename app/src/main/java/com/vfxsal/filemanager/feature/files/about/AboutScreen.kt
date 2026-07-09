@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -170,13 +173,22 @@ private fun UpdateSection(
                         }
                     }
                     if (state.available.releaseNotes.isNotBlank()) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
-                            text = state.available.releaseNotes,
+                            text = "What's new in v${state.available.versionName}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        // Full changelog, scrollable so long notes don't push the button off-screen.
+                        Text(
+                            text = cleanReleaseNotes(state.available.releaseNotes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 3,
-                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 220.dp)
+                                .verticalScroll(rememberScrollState()),
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -212,3 +224,26 @@ private fun UpdateSection(
         }
     }
 }
+
+/**
+ * GitHub release bodies are Markdown. There's no Markdown renderer in the app, so lightly
+ * de-noise the text for plain display: drop the "Full Changelog" footer line, strip heading
+ * hashes, and turn "* "/"- " bullets into "• ".
+ */
+private fun cleanReleaseNotes(raw: String): String =
+    raw.lineSequence()
+        .map { it.trimEnd() }
+        .filterNot { it.startsWith("**Full Changelog**") }
+        .map { line ->
+            val trimmed = line.trimStart()
+            when {
+                trimmed.startsWith("### ") -> trimmed.removePrefix("### ")
+                trimmed.startsWith("## ") -> trimmed.removePrefix("## ")
+                trimmed.startsWith("# ") -> trimmed.removePrefix("# ")
+                trimmed.startsWith("* ") -> "• " + trimmed.removePrefix("* ")
+                trimmed.startsWith("- ") -> "• " + trimmed.removePrefix("- ")
+                else -> line
+            }
+        }
+        .joinToString("\n")
+        .trim()
