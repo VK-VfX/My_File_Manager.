@@ -82,16 +82,16 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONTokener
 
-private const val HOME_URL = "https://duckduckgo.com"
+private const val HOME_URL = "https://www.google.com"
 
 /** Turns address-bar input into a URL: full URLs pass through, bare domains get https://,
- *  and anything that doesn't look like a host becomes a web search. */
+ *  and anything that doesn't look like a host becomes a Google web search. */
 internal fun normalizeInput(input: String): String {
     val trimmed = input.trim()
     return when {
         trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
         trimmed.contains('.') && !trimmed.contains(' ') -> "https://$trimmed"
-        else -> "https://duckduckgo.com/?q=" + URLEncoder.encode(trimmed, "UTF-8")
+        else -> "https://www.google.com/search?q=" + URLEncoder.encode(trimmed, "UTF-8")
     }
 }
 
@@ -112,7 +112,9 @@ fun BrowserScreen(
     var canGoBack by remember { mutableStateOf(false) }
     var pendingImageDownload by remember { mutableStateOf<String?>(null) }
     var showMediaSheet by remember { mutableStateOf(false) }
-    var showStartPage by remember { mutableStateOf(true) }
+    // Start on the homepage (loaded in the WebView), not the bookmarks/history panel - that
+    // full-screen panel over an empty bookmark list made the browser look broken on open.
+    var showStartPage by remember { mutableStateOf(false) }
     var currentPageUrl by remember { mutableStateOf(HOME_URL) }
     var isBookmarked by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
