@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/android-file-manager-media-ab1yii
+      - claude/android-file-manager-media-r13cqq
       - main
   workflow_dispatch: {}
 

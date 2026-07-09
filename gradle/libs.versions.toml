@@ -14,6 +14,7 @@ lifecycleService = "2.8.7"
 commonsCompress = "1.27.1"
 xz = "1.10"
 junit = "4.13.2"
+json = "20231013"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,10 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+
+# Real org.json impl for host-side unit tests - AGP's unit test classpath otherwise uses the
+# Android SDK's stub android.jar, where JSONObject/JSONArray throw "not mocked" at runtime.
+json = { group = "org.json", name = "json", version.ref = "json" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

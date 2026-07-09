@@ -1,6 +1,10 @@
 package com.vfxsal.filemanager.feature.browser
 
 import android.webkit.MimeTypeMap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import org.json.JSONArray
 
 enum class MediaKind(val label: String) {
     VIDEO("Video"),
@@ -9,9 +13,18 @@ enum class MediaKind(val label: String) {
     FILE("File"),
 }
 
+/** [sizeBytes]/[isProbingSize] are filled in lazily (see [DownloadOps.probeSize]) once the media
+ *  sheet asks for them - most pages never need a size lookup, so it isn't done eagerly for every
+ *  hit the sniffer finds. */
 data class DetectedMedia(val url: String, val kind: MediaKind) {
     val fileName: String
         get() = url.substringBefore('?').substringBefore('#').substringAfterLast('/').ifBlank { "media" }
+
+    val format: String
+        get() = MediaSniffer.extensionOf(url).uppercase().ifBlank { kind.label }
+
+    var sizeBytes: Long? by mutableStateOf(null)
+    var isProbingSize: Boolean by mutableStateOf(false)
 }
 
 /**
@@ -29,7 +42,7 @@ object MediaSniffer {
     private val streamExtensions = setOf("m3u8", "mpd", "m4s")
     private val fileExtensions = setOf("pdf", "zip", "rar", "7z", "apk", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "epub")
 
-    private fun extensionOf(url: String): String =
+    internal fun extensionOf(url: String): String =
         url.substringBefore('?')
             .substringBefore('#')
             .substringAfterLast('/')
@@ -55,33 +68,63 @@ object MediaSniffer {
         else -> MimeTypeMap.getSingleton().getMimeTypeFromExtension(extensionOf(url))
     }
 
+    /** A candidate media URL found by [COLLECT_PAGE_MEDIA_JS]. [assertedKind] is set only for
+     *  `<video>`/`<audio>` elements and their `<meta>` equivalents, where the markup itself
+     *  confirms the kind - useful because video hosts/CDNs routinely serve the actual file from
+     *  a signed, extension-less URL that [classify] alone would have no way to recognize. */
+    data class PageMediaHit(val url: String, val assertedKind: MediaKind?)
+
+    fun parsePageMedia(json: String): List<PageMediaHit> = runCatching {
+        val array = JSONArray(json)
+        (0 until array.length()).mapNotNull { i ->
+            val obj = array.optJSONObject(i) ?: return@mapNotNull null
+            val url = obj.optString("u").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val kind = when (obj.optString("k")) {
+                "video" -> MediaKind.VIDEO
+                "audio" -> MediaKind.AUDIO
+                else -> null
+            }
+            PageMediaHit(url, kind)
+        }
+    }.getOrDefault(emptyList())
+
     /**
-     * Collects candidate media URLs from the loaded page as a JSON array: `<video>/<audio>/
-     * <source>` current/`src`/`data-src`, Open Graph & Twitter player `<meta>` tags, and any
-     * `<a href>` that points at a known media/stream/file extension. [classify] filters the
-     * result down to things actually worth offering.
+     * Collects candidate media from the loaded page as a JSON array of `{u, k}` objects:
+     * `<video>/<audio>/<source>` current/`src`/`data-src` and Open Graph/Twitter player `<meta>`
+     * tags carry an explicit `k` ("video"/"audio") since the element type already tells us the
+     * kind; plain `<a href>` links matching a known media/stream/file extension carry no `k` and
+     * fall back to [classify]. [parsePageMedia] turns the JSON back into [PageMediaHit]s.
      */
     const val COLLECT_PAGE_MEDIA_JS = """
         (function() {
             var out = [];
-            function add(u) { if (u && out.indexOf(u) === -1) out.push(u); }
+            var seen = {};
+            function add(u, k) {
+                if (!u || seen[u]) return;
+                seen[u] = true;
+                out.push(k ? {u: u, k: k} : {u: u});
+            }
             var media = document.querySelectorAll('video, audio, source');
             for (var i = 0; i < media.length; i++) {
-                add(media[i].currentSrc || media[i].src);
-                add(media[i].getAttribute('data-src'));
-                add(media[i].getAttribute('data-source'));
+                var el = media[i];
+                var kind = el.tagName === 'AUDIO' || el.parentElement && el.parentElement.tagName === 'AUDIO'
+                    ? 'audio' : 'video';
+                add(el.currentSrc || el.src, kind);
+                add(el.getAttribute('data-src'), kind);
+                add(el.getAttribute('data-source'), kind);
             }
-            var metas = document.querySelectorAll(
+            var videoMetas = document.querySelectorAll(
                 'meta[property="og:video"], meta[property="og:video:url"], ' +
-                'meta[property="og:video:secure_url"], meta[property="og:audio"], ' +
-                'meta[name="twitter:player:stream"]'
+                'meta[property="og:video:secure_url"], meta[name="twitter:player:stream"]'
             );
-            for (var j = 0; j < metas.length; j++) { add(metas[j].getAttribute('content')); }
+            for (var j = 0; j < videoMetas.length; j++) { add(videoMetas[j].getAttribute('content'), 'video'); }
+            var audioMetas = document.querySelectorAll('meta[property="og:audio"]');
+            for (var m = 0; m < audioMetas.length; m++) { add(audioMetas[m].getAttribute('content'), 'audio'); }
             var links = document.querySelectorAll('a[href]');
             var re = /\.(mp4|webm|mkv|mov|m4v|avi|flv|ogv|wmv|mpe?g|mp3|m4a|aac|flac|wav|ogg|opus|m3u8|mpd|ts|zip|rar|7z|apk|pdf|epub|docx?|xlsx?|pptx?)(\?|#|${'$'})/i;
             for (var k = 0; k < links.length; k++) {
                 var h = links[k].href;
-                if (h && re.test(h)) add(h);
+                if (h && re.test(h)) add(h, null);
             }
             return JSON.stringify(out);
         })()

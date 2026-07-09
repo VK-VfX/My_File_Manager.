@@ -3,6 +3,28 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.9.0
+
+### Changed — Browser overhaul
+- **Multiple tabs** — the browser now supports real multi-tab browsing: a tab strip above the
+  address bar to switch between open tabs, a "+" button to open new ones, and per-tab close
+  buttons. Each tab keeps its own navigation history, so switching back to one picks up right
+  where you left it.
+- **Bigger, clearer controls** — the address bar now gets a full-width row of its own instead of
+  being squeezed alongside six icons, and navigation (back/forward/reload/history/media/downloads)
+  moved to a full-size bottom bar within thumb reach. Tabs and touch targets are sized for a
+  thumb, not a mouse pointer.
+- **History and bookmarks are reachable again** — previously they only lived on a blank start
+  page the browser no longer shows on open, which made them effectively dead. They're now one tap
+  away from the bottom bar at any time, with per-page bookmarking and a clear-history action.
+- **Better media detection** — `<video>`/`<audio>` elements and their Open Graph/Twitter player
+  tags are now recognized as video/audio directly from the markup, not just by guessing from the
+  URL's file extension - this catches mp4s and other media served from signed, extension-less CDN
+  URLs that were previously missed.
+- **File size and format shown before downloading** — the "media on this page" list now shows
+  each file's format up front and probes its size with a lightweight HEAD request, so you know
+  what you're about to download.
+
 ## v4.8.0
 
 ### Changed

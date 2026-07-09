@@ -12,8 +12,8 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "4.8.0"
+        versionCode = 21
+        versionName = "4.9.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -111,4 +111,5 @@ dependencies {
     implementation(libs.xz)
 
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }

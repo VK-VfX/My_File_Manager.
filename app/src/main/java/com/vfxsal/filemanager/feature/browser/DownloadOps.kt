@@ -6,6 +6,8 @@ import android.net.Uri
 import android.os.Environment
 import android.webkit.CookieManager
 import android.webkit.URLUtil
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Download engine built on the system [DownloadManager] rather than hand-rolled HTTP:
@@ -71,6 +73,24 @@ object DownloadOps {
         // Remember the source URL so a failed download can be retried.
         urlPrefs(context).edit().putString(id.toString(), url).apply()
         id
+    }.getOrNull()
+
+    /** Probes [url]'s size with a HEAD request (falling back to no result rather than downloading
+     *  the body) so the browser can show "12.4 MB" before the user commits to a download. Blocking -
+     *  callers must run this off the main thread. Many CDNs omit Content-Length or reject HEAD for
+     *  streamed/segmented media, so a null result is normal and just means "size unknown". */
+    fun probeSize(url: String, userAgent: String?): Long? = runCatching {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "HEAD"
+            instanceFollowRedirects = true
+            connectTimeout = 6_000
+            readTimeout = 6_000
+            if (!userAgent.isNullOrBlank()) setRequestProperty("User-Agent", userAgent)
+            CookieManager.getInstance().getCookie(url)?.let { setRequestProperty("Cookie", it) }
+        }
+        val length = connection.contentLengthLong
+        connection.disconnect()
+        length.takeIf { it > 0 }
     }.getOrNull()
 
     /** Re-enqueues the original URL behind a (usually failed) download, then drops the old row. */

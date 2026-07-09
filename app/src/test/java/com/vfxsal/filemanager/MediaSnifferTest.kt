@@ -46,4 +46,21 @@ class MediaSnifferTest {
         assertNull(MediaSniffer.classify("https://host/page"))
         assertNull(MediaSniffer.classify("https://host/style.css"))
     }
+
+    @Test
+    fun `page media hits with an asserted kind are trusted over the url extension`() {
+        val hits = MediaSniffer.parsePageMedia(
+            """[{"u":"https://cdn.example.com/v/signed-abc123","k":"video"},{"u":"https://host/song.mp3"}]""",
+        )
+        assertEquals(2, hits.size)
+        assertEquals(MediaKind.VIDEO, hits[0].assertedKind)
+        assertEquals("https://cdn.example.com/v/signed-abc123", hits[0].url)
+        assertNull(hits[1].assertedKind)
+    }
+
+    @Test
+    fun `page media parsing tolerates malformed json`() {
+        assertEquals(emptyList<Any>(), MediaSniffer.parsePageMedia("not json"))
+        assertEquals(emptyList<Any>(), MediaSniffer.parsePageMedia("[{}]"))
+    }
 }
