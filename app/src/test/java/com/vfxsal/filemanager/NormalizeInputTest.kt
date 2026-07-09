@@ -22,13 +22,13 @@ class NormalizeInputTest {
     @Test
     fun `plain text becomes a web search`() {
         val result = normalizeInput("cute cat videos")
-        assertTrue(result.startsWith("https://duckduckgo.com/?q="))
+        assertTrue(result.startsWith("https://www.google.com/search?q="))
         assertTrue(result.contains("cute"))
     }
 
     @Test
     fun `spaced input with a dot is still treated as a search`() {
         val result = normalizeInput("what is 3.5")
-        assertTrue(result.startsWith("https://duckduckgo.com/?q="))
+        assertTrue(result.startsWith("https://www.google.com/search?q="))
     }
 }
