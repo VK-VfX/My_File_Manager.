@@ -43,6 +43,7 @@ import com.vfxsal.filemanager.feature.clean.cleanNavGraph
 import com.vfxsal.filemanager.feature.files.filesNavGraph
 import com.vfxsal.filemanager.feature.music.musicNavGraph
 import com.vfxsal.filemanager.feature.settings.SettingsViewModel
+import com.vfxsal.filemanager.feature.tools.toolsNavGraph
 import com.vfxsal.filemanager.feature.video.videoNavGraph
 import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
 import com.vfxsal.filemanager.ui.components.OperationProgressOverlay
@@ -73,7 +74,7 @@ private val AppPopExitTransition: AnimatedContentTransitionScope<NavBackStackEnt
 
 /**
  * Hosts every feature's nested nav graph and draws the bottom navigation bar.
- * The bar is only shown while the current destination is one of the five
+ * The bar is only shown while the current destination is one of the
  * top-level graph routes; drilling into a detail screen (file details, video
  * player, now playing, wallpaper preview, ...) hides it automatically because
  * those routes live under a different route string within each feature graph.
@@ -128,6 +129,7 @@ fun AppRoot(settingsViewModel: SettingsViewModel) {
             videoNavGraph(navController)
             musicNavGraph(navController)
             wallpapersNavGraph(navController)
+            toolsNavGraph(navController)
         }
     }
 

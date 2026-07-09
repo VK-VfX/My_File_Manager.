@@ -3,6 +3,24 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.7.0
+
+### Added — Advanced Productivity Tools
+A brand-new **Tools** tab in the bottom navigation collecting three power features:
+
+- **Dual-Pane Manager** — two independent directory panes side by side. Long-press a file and
+  drag it onto the other pane to copy it, or use the per-pane action bar to copy, move, delete,
+  compress or extract the current selection.
+- **Archive Manager** — compress files and folders into **ZIP or 7z** and extract archives
+  (zip/7z/jar/apk) directly in the app. 7z is powered by Apache Commons Compress + XZ; ZIP still
+  uses the built-in java.util.zip path. Both compress and extract are zip-slip protected.
+- **Quick Viewer** — a lightweight previewer that opens any file (via the Storage Access
+  Framework, no permission needed) and reads text, shows images, and plays audio/video inline,
+  handing off to another app only when a format can't be previewed.
+
+### Changed
+- Unit tests now cover the new `ArchiveOps` ZIP and 7z round-trips.
+
 ## v4.6.0
 
 ### Added
