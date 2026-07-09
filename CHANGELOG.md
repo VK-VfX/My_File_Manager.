@@ -3,6 +3,19 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.10.0
+
+### Changed — Browser can now actually download HLS streams
+- **Real `.m3u8` downloads** — the browser detected HLS streams before, but tapping "Download" on
+  one just saved the raw manifest text file, not a video. It now fetches every segment, decrypts
+  AES-128-encrypted ones, and merges them into a single playable `.ts` file in Downloads - with a
+  progress dialog (segments downloaded / total) and the ability to cancel mid-download.
+- Master playlists (the kind that list several resolutions) are handled automatically by picking
+  the highest-bandwidth variant.
+- Segments download with bounded concurrency and per-segment retries; streams using an encryption
+  scheme we can't decrypt (anything other than AES-128) now fail with a clear error instead of
+  silently producing a broken file.
+
 ## v4.9.0
 
 ### Changed — Browser overhaul
