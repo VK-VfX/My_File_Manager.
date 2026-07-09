@@ -17,27 +17,34 @@ object BiometricUnlock {
 
     fun isAvailable(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false
-        val manager = context.getSystemService(BiometricManager::class.java) ?: return false
-        return manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) ==
-            BiometricManager.BIOMETRIC_SUCCESS
+        // runCatching because some OEM builds throw (SecurityException and friends) from
+        // canAuthenticate instead of returning an error code - a crash here would take
+        // down the whole vault screen just for asking whether biometrics exist.
+        return runCatching {
+            val manager = context.getSystemService(BiometricManager::class.java) ?: return false
+            manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) ==
+                BiometricManager.BIOMETRIC_SUCCESS
+        }.getOrDefault(false)
     }
 
     /** [context] must be an Activity context so the system sheet has a window to attach to. */
     fun authenticate(context: Context, onSuccess: () -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
-        val executor = ContextCompat.getMainExecutor(context)
-        val prompt = BiometricPrompt.Builder(context)
-            .setTitle("Unlock vault")
-            .setNegativeButton("Use PIN", executor) { _, _ -> /* fall back to the PIN field */ }
-            .build()
-        prompt.authenticate(
-            CancellationSignal(),
-            executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
-                    onSuccess()
-                }
-            },
-        )
+        runCatching {
+            val executor = ContextCompat.getMainExecutor(context)
+            val prompt = BiometricPrompt.Builder(context)
+                .setTitle("Unlock vault")
+                .setNegativeButton("Use PIN", executor) { _, _ -> /* fall back to the PIN field */ }
+                .build()
+            prompt.authenticate(
+                CancellationSignal(),
+                executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
+                        onSuccess()
+                    }
+                },
+            )
+        }
     }
 }

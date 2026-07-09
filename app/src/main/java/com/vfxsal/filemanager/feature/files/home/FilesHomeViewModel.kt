@@ -51,6 +51,10 @@ class FilesHomeViewModel(application: Application) : AndroidViewModel(applicatio
     fun refresh() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
+            // Storage stats are a single statfs call - surface them immediately so the
+            // home screen renders its hero content while the file index loads behind it.
+            val stats = withContext(Dispatchers.IO) { StorageStatsUtils.primaryStorageStats() }
+            _uiState.value = _uiState.value.copy(storageStats = stats)
             val newState = withContext(Dispatchers.IO) { computeState() }
             _uiState.value = newState
         }

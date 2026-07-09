@@ -2,11 +2,13 @@ package com.vfxsal.filemanager.ui.nav
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Handyman
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Speed
@@ -55,5 +57,11 @@ enum class TopLevelDestination(
         labelRes = R.string.nav_wallpapers,
         selectedIcon = Icons.Filled.Wallpaper,
         unselectedIcon = Icons.Outlined.Wallpaper,
+    ),
+    TOOLS(
+        graphRoute = "tools",
+        labelRes = R.string.nav_tools,
+        selectedIcon = Icons.Filled.Handyman,
+        unselectedIcon = Icons.Outlined.Handyman,
     ),
 }

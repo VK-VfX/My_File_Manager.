@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.data.FileIndex
+import com.vfxsal.filemanager.data.MediaStoreIndex
 import com.vfxsal.filemanager.feature.files.browse.SortBy
 import com.vfxsal.filemanager.feature.files.browse.buildFileEntryComparator
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
@@ -81,7 +82,11 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
                 viewMode = viewMode,
             )
             rawEntries = withContext(Dispatchers.IO) {
-                FileIndex.allFiles().filter { it.category == category }
+                if (MediaStoreIndex.isSupported(category)) {
+                    MediaStoreIndex.query(getApplication(), category)
+                } else {
+                    FileIndex.allFiles().filter { it.category == category }
+                }
             }
             _uiState.update { it.copy(isLoading = false) }
             recompute()

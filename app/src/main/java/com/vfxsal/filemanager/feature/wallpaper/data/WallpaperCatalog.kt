@@ -31,6 +31,17 @@ object WallpaperCatalog {
     private val mint = Color(0xFF64FFDA)
     private val skyLight = Color(0xFF40C4FF)
 
+    // Alan Wake 2 palette: cold flashlight white/blue, the Dark Place's crimson, sodium
+    // neon amber, and a foggy forest teal.
+    private val flashlightWhite = Color(0xFFEAF2FF)
+    private val iceBlue = Color(0xFF8FB7FF)
+    private val darkPlaceRed = Color(0xFFE10E2A)
+    private val bloodRed = Color(0xFFB00020)
+    private val neonAmber = Color(0xFFFFB300)
+    private val sodiumOrange = Color(0xFFFF7A1A)
+    private val mistTeal = Color(0xFF3FD0C9)
+    private val nightBlue = Color(0xFF4A6CC0)
+
     val designs: List<WallpaperDesign> = listOf(
         // Orb glow (single soft light source)
         WallpaperDesign("orb_azure", "Azure Glow", WallpaperStyle.ORB_GLOW, azure, seed = 1L),
@@ -152,5 +163,20 @@ object WallpaperCatalog {
         WallpaperDesign("meteor_ember", "Ember Meteors", WallpaperStyle.METEOR_SHOWER, ember, seed = 77L),
         WallpaperDesign("meteor_emerald", "Emerald Meteors", WallpaperStyle.METEOR_SHOWER, emerald, seed = 78L),
         WallpaperDesign("meteor_magenta", "Magenta Meteors", WallpaperStyle.METEOR_SHOWER, magenta, seed = 79L),
+
+        // --- Alan Wake 2 inspired ---------------------------------------------------------
+        // Flashlight beam cutting the dark
+        WallpaperDesign("aw_beam_torch", "The Torch", WallpaperStyle.LIGHT_BEAM, flashlightWhite, seed = 80L),
+        WallpaperDesign("aw_beam_cold", "Cold Beam", WallpaperStyle.LIGHT_BEAM, iceBlue, seed = 81L),
+        // Misty pine forest (Cauldron Lake / Bright Falls)
+        WallpaperDesign("aw_forest_cauldron", "Cauldron Lake", WallpaperStyle.PINE_FOREST, mistTeal, seed = 82L),
+        WallpaperDesign("aw_forest_dawn", "Bright Falls Dawn", WallpaperStyle.PINE_FOREST, sodiumOrange, seed = 83L),
+        WallpaperDesign("aw_forest_night", "Night Woods", WallpaperStyle.PINE_FOREST, nightBlue, seed = 84L),
+        // Wet-street neon signage (Oceanview Hotel)
+        WallpaperDesign("aw_neon_oceanview", "Oceanview Neon", WallpaperStyle.NEON_SIGN, neonAmber, seed = 85L),
+        WallpaperDesign("aw_neon_vacancy", "No Vacancy", WallpaperStyle.NEON_SIGN, darkPlaceRed, seed = 86L),
+        // The Dark Place descent spiral
+        WallpaperDesign("aw_vortex_dark", "The Dark Place", WallpaperStyle.DARK_VORTEX, darkPlaceRed, seed = 87L),
+        WallpaperDesign("aw_vortex_blood", "Spiral Descent", WallpaperStyle.DARK_VORTEX, bloodRed, seed = 88L),
     )
 }
