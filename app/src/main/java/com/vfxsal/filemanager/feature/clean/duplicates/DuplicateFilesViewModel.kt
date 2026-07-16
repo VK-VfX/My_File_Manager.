@@ -87,19 +87,14 @@ class DuplicateFilesViewModel(application: Application) : AndroidViewModel(appli
 
     fun deleteSelected() {
         val state = _uiState.value
-        val toDelete = state.groups.flatMap { it.files }.filter { it.path in state.selectedPaths }
+        val toDelete = state.groups.flatMap { it.files }.filter { it.path in state.selectedPaths }.map { File(it.path) }
         scanJob?.cancel()
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isDeleting = true) }
             OperationProgressBus.start("Deleting duplicates", toDelete.size)
             try {
-                toDelete.forEachIndexed { index, entry ->
-                    try {
-                        TrashOps.moveToTrash(getApplication<Application>(), File(entry.path))
-                    } catch (e: SecurityException) {
-                        // Skip files we lost access to mid-scan rather than crashing the whole clean-up.
-                    }
-                    OperationProgressBus.update(index + 1)
+                TrashOps.moveMultipleToTrash(getApplication<Application>(), toDelete) { done, _ ->
+                    OperationProgressBus.update(done)
                 }
             } finally {
                 OperationProgressBus.finish()

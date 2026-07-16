@@ -3,6 +3,26 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.12.0
+
+### Changed — Much faster deletes, plus a Clean refresh button
+- **Deleting is dramatically faster, especially multi-select and big files** — every delete
+  (Files, category screens, and the Clean tools) turned out to be doing far more work than it
+  needed to:
+  - Trash was stored in the app's internal storage, a different filesystem from the shared
+    storage almost every file lives on. That meant every "delete" was silently falling back to a
+    full byte-for-byte copy of the file plus a delete of the original, instead of an instant
+    rename. Trash now lives in app-private storage on the *same* volume as the rest of shared
+    storage, so moving a file there is a real, instant move for the common case.
+  - Multi-select delete rewrote the entire trash manifest from scratch after *every single file*
+    - selecting 50 files meant 50 full read+rewrite passes over the manifest, independent of file
+    size. It's now read and written once per batch.
+- **Refresh button in Clean** — the dashboard only supported pull-to-refresh before, which isn't
+  discoverable on a screen with no visible top bar. There's now a refresh icon next to the "Clean"
+  title.
+- Minor Compose recomposition cleanup in the Clean dashboard's storage breakdown (avoids
+  re-sorting the category list on every recomposition, not just when it actually changes).
+
 ## v4.11.0
 
 ### Changed — HLS downloads now produce a real, viewable mp4

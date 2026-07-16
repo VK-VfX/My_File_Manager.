@@ -191,13 +191,7 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
             val deleted = withContext(Dispatchers.IO) {
                 OperationProgressBus.start("Deleting ${targets.size} items", targets.size)
                 try {
-                    var done = 0
-                    targets.count { target ->
-                        val moved = TrashOps.moveToTrash(context, target)
-                        done++
-                        OperationProgressBus.update(done)
-                        moved
-                    }
+                    TrashOps.moveMultipleToTrash(context, targets) { done, _ -> OperationProgressBus.update(done) }
                 } finally {
                     OperationProgressBus.finish()
                 }
