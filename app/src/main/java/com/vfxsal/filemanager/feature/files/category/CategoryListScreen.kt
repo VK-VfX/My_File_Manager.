@@ -328,9 +328,9 @@ fun CategoryListScreen(
         DeleteConfirmDialog(
             count = uiState.selectedPaths.size,
             onDismiss = { showDeleteSelectedDialog = false },
-            onConfirm = {
+            onConfirm = { permanent ->
                 showDeleteSelectedDialog = false
-                viewModel.deleteSelected { count ->
+                viewModel.deleteSelected(permanent) { count ->
                     scope.launch { snackbarHostState.showSnackbar("Deleted $count item(s)") }
                 }
             },

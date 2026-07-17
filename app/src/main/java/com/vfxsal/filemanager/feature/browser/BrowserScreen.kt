@@ -3,12 +3,19 @@ package com.vfxsal.filemanager.feature.browser
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Message
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -129,6 +136,7 @@ fun BrowserScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val isDarkTheme = isSystemInDarkTheme()
 
     val tabs = remember { mutableStateListOf(BrowserTab(HOME_URL)) }
     var activeTabId by remember { mutableStateOf(tabs.first().id) }
@@ -321,6 +329,22 @@ fun BrowserScreen(
                         settings.loadWithOverviewMode = true
                         settings.useWideViewPort = true
                         settings.mediaPlaybackRequiresUserGesture = true
+                        settings.setSupportZoom(true)
+                        settings.setSupportMultipleWindows(true)
+                        settings.javaScriptCanOpenWindowsAutomatically = true
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                        settings.safeBrowsingEnabled = true
+
+                        // Full Chromium engine features via androidx.webkit's feature-detected
+                        // compat APIs, since which ones are actually available depends on the
+                        // installed WebView/Chromium build (updated independently via Play
+                        // Store), not just the app's minSdk.
+                        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                            WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, isDarkTheme)
+                        }
+
+                        CookieManager.getInstance().setAcceptCookie(true)
+                        CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -387,6 +411,25 @@ fun BrowserScreen(
                                 if (!title.isNullOrBlank()) {
                                     tabs.firstOrNull { t -> t.id == activeTabId }?.title = title
                                 }
+                            }
+
+                            // Sites that open links via window.open()/target=_blank (OAuth
+                            // popups, "open in new tab" links) get a real new tab in this
+                            // app's own tab strip instead of silently doing nothing - there's
+                            // only ever one live WebView, reused across tabs, so the popup's
+                            // transport is handed that same instance.
+                            override fun onCreateWindow(
+                                view: WebView?,
+                                isDialog: Boolean,
+                                isUserGesture: Boolean,
+                                resultMsg: Message?,
+                            ): Boolean {
+                                if (isDialog) return false
+                                addTab()
+                                val transport = resultMsg?.obj as? WebView.WebViewTransport
+                                transport?.webView = webViewRef
+                                resultMsg?.sendToTarget()
+                                return true
                             }
                         }
 
@@ -752,6 +795,11 @@ private fun BrowserLibrary(
     onClearHistory: () -> Unit,
     onClose: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val engineVersion = remember {
+        runCatching { WebViewCompat.getCurrentWebViewPackage(context)?.versionName }.getOrNull()
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -764,11 +812,19 @@ private fun BrowserLibrary(
                 IconButton(onClick = onClose) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to page")
                 }
-                Text(
-                    text = "History & bookmarks",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
+                Column(modifier = Modifier.padding(start = 4.dp)) {
+                    Text(
+                        text = "History & bookmarks",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    if (engineVersion != null) {
+                        Text(
+                            text = "Powered by Chromium $engineVersion",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

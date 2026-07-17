@@ -76,11 +76,12 @@ class JunkFilesViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun deleteSelected() {
+    fun deleteSelected(permanent: Boolean) {
         val state = _uiState.value
         val itemsToDelete = state.groups.flatMap { it.items }.filter { it.path in state.selectedPaths }
         // Cache contents are regenerated automatically and not worth recovering, so those are
-        // deleted outright; everything else goes through trash (in one batched call - trashing
+        // always deleted outright regardless of the permanent flag; everything else goes through
+        // trash or is deleted permanently per the user's choice (in one batched call - trashing
         // items one at a time rewrote the whole trash manifest per item, which made deleting many
         // files at once much slower than it needed to be).
         val (cacheItems, trashItems) = itemsToDelete.partition { it.category == JunkCategory.APP_CACHE }
@@ -100,8 +101,15 @@ class JunkFilesViewModel(application: Application) : AndroidViewModel(applicatio
                     OperationProgressBus.update(done)
                 }
                 val cacheDone = done
-                TrashOps.moveMultipleToTrash(getApplication<Application>(), trashItems.map { it.file }) { movedSoFar, _ ->
-                    OperationProgressBus.update(cacheDone + movedSoFar)
+                val context = getApplication<Application>()
+                if (permanent) {
+                    TrashOps.deletePermanently(context, trashItems.map { it.file }) { deletedSoFar, _ ->
+                        OperationProgressBus.update(cacheDone + deletedSoFar)
+                    }
+                } else {
+                    TrashOps.moveMultipleToTrash(context, trashItems.map { it.file }) { movedSoFar, _ ->
+                        OperationProgressBus.update(cacheDone + movedSoFar)
+                    }
                 }
             } finally {
                 OperationProgressBus.finish()

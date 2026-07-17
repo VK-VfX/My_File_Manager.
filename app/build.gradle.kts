@@ -12,8 +12,8 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "4.12.0"
+        versionCode = 25
+        versionName = "4.13.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -93,6 +93,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.webkit)
 
     implementation(libs.kotlinx.coroutines.android)
 

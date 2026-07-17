@@ -58,10 +58,16 @@ class ImageViewerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun deleteAndRemove(entry: FileEntry, onResult: (Boolean) -> Unit) {
+    fun deleteAndRemove(entry: FileEntry, permanent: Boolean, onResult: (Boolean) -> Unit) {
         val context = getApplication<Application>()
         viewModelScope.launch {
-            val success = withContext(Dispatchers.IO) { TrashOps.moveToTrash(context, entry.file) }
+            val success = withContext(Dispatchers.IO) {
+                if (permanent) {
+                    TrashOps.deletePermanently(context, listOf(entry.file)) == 1
+                } else {
+                    TrashOps.moveToTrash(context, entry.file)
+                }
+            }
             if (success) {
                 _uiState.update { state -> state.copy(images = state.images.filterNot { it.path == entry.path }) }
             }

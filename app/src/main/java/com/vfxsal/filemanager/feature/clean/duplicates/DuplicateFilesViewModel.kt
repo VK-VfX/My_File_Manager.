@@ -85,7 +85,7 @@ class DuplicateFilesViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    fun deleteSelected() {
+    fun deleteSelected(permanent: Boolean) {
         val state = _uiState.value
         val toDelete = state.groups.flatMap { it.files }.filter { it.path in state.selectedPaths }.map { File(it.path) }
         scanJob?.cancel()
@@ -93,8 +93,11 @@ class DuplicateFilesViewModel(application: Application) : AndroidViewModel(appli
             _uiState.update { it.copy(isDeleting = true) }
             OperationProgressBus.start("Deleting duplicates", toDelete.size)
             try {
-                TrashOps.moveMultipleToTrash(getApplication<Application>(), toDelete) { done, _ ->
-                    OperationProgressBus.update(done)
+                val context = getApplication<Application>()
+                if (permanent) {
+                    TrashOps.deletePermanently(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
+                } else {
+                    TrashOps.moveMultipleToTrash(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
                 }
             } finally {
                 OperationProgressBus.finish()

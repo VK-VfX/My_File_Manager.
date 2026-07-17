@@ -93,6 +93,36 @@ object TrashOps {
         newEntries.size
     }
 
+    /** Deletes every file in [files] outright, bypassing the recycle bin entirely - for when the
+     *  user explicitly picks "Delete permanently" over the default, recoverable trash move. */
+    fun deletePermanently(
+        context: Context,
+        files: List<File>,
+        onProgress: (deletedSoFar: Int, total: Int) -> Unit = { _, _ -> },
+    ): Int {
+        if (files.isEmpty()) return 0
+        var deletedCount = 0
+        val removedPaths = mutableListOf<String>()
+
+        for ((index, file) in files.withIndex()) {
+            try {
+                if (file.deleteRecursively()) {
+                    deletedCount++
+                    removedPaths.add(file.absolutePath)
+                }
+            } catch (e: Exception) {
+                // Skip this one, keep going with the rest of the batch.
+            }
+            onProgress(index + 1, files.size)
+        }
+
+        if (removedPaths.isNotEmpty()) {
+            FileTagsStore.onPathsRemoved(context, removedPaths)
+            FileIndex.invalidate()
+        }
+        return deletedCount
+    }
+
     fun listEntries(context: Context): List<TrashEntry> =
         readManifest(context).filter { it.trashedFile(context).exists() }
 

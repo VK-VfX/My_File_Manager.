@@ -184,14 +184,18 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    fun deleteSelected(onResult: (Int) -> Unit) {
+    fun deleteSelected(permanent: Boolean, onResult: (Int) -> Unit) {
         val targets = _uiState.value.selectedPaths.map { File(it) }
         val context = getApplication<Application>()
         viewModelScope.launch {
             val deleted = withContext(Dispatchers.IO) {
                 OperationProgressBus.start("Deleting ${targets.size} items", targets.size)
                 try {
-                    TrashOps.moveMultipleToTrash(context, targets) { done, _ -> OperationProgressBus.update(done) }
+                    if (permanent) {
+                        TrashOps.deletePermanently(context, targets) { done, _ -> OperationProgressBus.update(done) }
+                    } else {
+                        TrashOps.moveMultipleToTrash(context, targets) { done, _ -> OperationProgressBus.update(done) }
+                    }
                 } finally {
                     OperationProgressBus.finish()
                 }

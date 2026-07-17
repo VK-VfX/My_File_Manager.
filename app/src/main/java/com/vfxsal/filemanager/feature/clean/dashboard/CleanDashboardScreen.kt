@@ -81,11 +81,17 @@ fun CleanDashboardScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
+        // The dashboard's ViewModel lives for as long as this destination stays on the back
+        // stack, so navigating to Junk/Large/Duplicates/Similar Photos, deleting something, and
+        // pressing back does NOT recreate it - without a resume-triggered refresh it just kept
+        // showing the totals from before the delete, which read as the numbers "not tallying."
+        var isFirstResume = true
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 val nowHasAccess = PermissionUtils.hasAllFilesAccess(context)
-                if (nowHasAccess && !hasAccess) viewModel.refresh()
+                if (nowHasAccess && (!hasAccess || !isFirstResume)) viewModel.refresh()
                 hasAccess = nowHasAccess
+                isFirstResume = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

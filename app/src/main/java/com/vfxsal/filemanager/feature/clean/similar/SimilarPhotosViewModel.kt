@@ -85,7 +85,7 @@ class SimilarPhotosViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun deleteSelected() {
+    fun deleteSelected(permanent: Boolean) {
         val state = _uiState.value
         val toDelete = state.groups.flatMap { it.files }.filter { it.path in state.selectedPaths }.map { File(it.path) }
         scanJob?.cancel()
@@ -94,7 +94,11 @@ class SimilarPhotosViewModel(application: Application) : AndroidViewModel(applic
             val context = getApplication<Application>()
             OperationProgressBus.start("Deleting similar photos", toDelete.size)
             try {
-                TrashOps.moveMultipleToTrash(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
+                if (permanent) {
+                    TrashOps.deletePermanently(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
+                } else {
+                    TrashOps.moveMultipleToTrash(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
+                }
             } finally {
                 OperationProgressBus.finish()
             }

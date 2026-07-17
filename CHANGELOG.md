@@ -3,6 +3,34 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.13.0
+
+### Changed — Permanent delete, a revamped progress UI, and a real Chromium upgrade
+- **Choose "Move to Recycle Bin" or "Delete permanently"** — every delete confirmation in the app
+  (Files, category screens, image viewer, and all four Clean tools: Junk, Large Files, Duplicates,
+  Similar Photos) now asks which you want, instead of always soft-deleting. This also fixes the
+  dialogs' copy, which previously and incorrectly claimed deletion was immediate and unrecoverable
+  even though it always went to the recycle bin.
+- **Clean dashboard totals now stay accurate** — the dashboard only refreshed its numbers on
+  first load or after a permission grant, so deleting junk/large/duplicate files from a sub-screen
+  and returning didn't update the totals shown. It now refreshes every time you come back to it.
+- **Revamped progress bar** — the shared batch-operation overlay (shown for multi-file deletes,
+  emptying the recycle bin, etc.) now uses a gradient progress track and pairs with the new
+  spinner instead of the plain default Material bar.
+- **New loading spinner** — replaced the wavy 5-lobe "flower" animation with a rotating circle
+  made of two arrow-tipped arcs, used everywhere a loading indicator appears across the app.
+- **Browser: real Chromium-engine upgrades** — Android's WebView is Chromium under the hood, but
+  several modern engine features weren't turned on:
+  - Popups and `window.open()`/`target="_blank"` links (common in OAuth logins and "open in new
+    tab" links) previously did nothing; they now open in a new tab in this browser's own tab
+    strip.
+  - Mixed-content compatibility mode, so more real-world HTTP/HTTPS-mixed pages load correctly.
+  - Third-party cookies enabled, needed by many login and embedded-content flows.
+  - Explicit Safe Browsing.
+  - Algorithmic dark-mode rendering that follows the app's theme.
+  - The History & bookmarks screen now shows the actual installed Chromium version powering the
+    browser.
+
 ## v4.12.0
 
 ### Changed — Much faster deletes, plus a Clean refresh button

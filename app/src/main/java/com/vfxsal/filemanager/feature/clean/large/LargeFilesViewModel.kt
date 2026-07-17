@@ -87,7 +87,7 @@ class LargeFilesViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun deleteSelected() {
+    fun deleteSelected(permanent: Boolean) {
         val state = _uiState.value
         val toDelete = state.files.filter { it.path in state.selectedPaths }.map { File(it.path) }
         scanJob?.cancel()
@@ -95,8 +95,11 @@ class LargeFilesViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(isDeleting = true) }
             OperationProgressBus.start("Deleting large files", toDelete.size)
             try {
-                TrashOps.moveMultipleToTrash(getApplication<Application>(), toDelete) { done, _ ->
-                    OperationProgressBus.update(done)
+                val context = getApplication<Application>()
+                if (permanent) {
+                    TrashOps.deletePermanently(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
+                } else {
+                    TrashOps.moveMultipleToTrash(context, toDelete) { done, _ -> OperationProgressBus.update(done) }
                 }
             } finally {
                 OperationProgressBus.finish()
