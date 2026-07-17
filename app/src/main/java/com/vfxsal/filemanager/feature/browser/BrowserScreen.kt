@@ -1,7 +1,10 @@
 package com.vfxsal.filemanager.feature.browser
 
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
 import android.os.Message
 import android.webkit.CookieManager
@@ -9,6 +12,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -38,18 +42,25 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,6 +69,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,11 +86,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,10 +101,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -102,6 +121,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONTokener
 
 private const val HOME_URL = "https://www.google.com"
+
+private const val DESKTOP_USER_AGENT =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+        "Chrome/120.0.0.0 Safari/537.36"
 
 /** Turns address-bar input into a URL: full URLs pass through, bare domains get https://,
  *  and anything that doesn't look like a host becomes a Google web search. */
@@ -117,12 +140,13 @@ internal fun normalizeInput(input: String): String {
 /** One open browser tab. Only the active tab's [WebView] is live; backgrounded tabs keep their
  *  navigation history in [webViewBundle] (via [WebView.saveState]/[WebView.restoreState]) so
  *  switching tabs is cheap and doesn't require juggling N live WebView instances. */
-private class BrowserTab(initialUrl: String) {
+private class BrowserTab(initialUrl: String, val isIncognito: Boolean = false) {
     val id: String = UUID.randomUUID().toString()
     var url by mutableStateOf(initialUrl)
     var title by mutableStateOf("New tab")
     var isBookmarked by mutableStateOf(false)
     var canGoBack by mutableStateOf(false)
+    var desktopSite by mutableStateOf(false)
     var webViewBundle: Bundle? = null
 }
 
@@ -137,12 +161,17 @@ fun BrowserScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val isDarkTheme = isSystemInDarkTheme()
+    val focusManager = LocalFocusManager.current
 
     val tabs = remember { mutableStateListOf(BrowserTab(HOME_URL)) }
     var activeTabId by remember { mutableStateOf(tabs.first().id) }
     fun activeTab(): BrowserTab = tabs.firstOrNull { it.id == activeTabId } ?: tabs.first()
 
-    var addressText by remember { mutableStateOf(HOME_URL) }
+    var addressField by remember { mutableStateOf(TextFieldValue(HOME_URL)) }
+    var addressFocused by remember { mutableStateOf(false) }
+    fun setAddress(url: String) {
+        addressField = TextFieldValue(url, selection = TextRange(url.length))
+    }
     var pageProgress by remember { mutableFloatStateOf(0f) }
     var isLoading by remember { mutableStateOf(false) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -151,6 +180,23 @@ fun BrowserScreen(
     var showLibrary by remember { mutableStateOf(false) }
     var isBookmarked by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showFindBar by remember { mutableStateOf(false) }
+    var findQuery by remember { mutableStateOf("") }
+    var findActiveMatch by remember { mutableIntStateOf(0) }
+    var findTotalMatches by remember { mutableIntStateOf(0) }
+
+    val addressSuggestions = remember(addressField.text, addressFocused) {
+        val query = addressField.text.trim()
+        if (!addressFocused || query.isBlank()) {
+            emptyList()
+        } else {
+            (BrowserStore.history(context) + BrowserStore.bookmarks(context))
+                .distinctBy { it.url }
+                .filter { it.url.contains(query, ignoreCase = true) || it.title.contains(query, ignoreCase = true) }
+                .take(5)
+        }
+    }
 
     // Media spotted on the current page (network sniffing + DOM scan), newest page only.
     val detectedMedia = remember { mutableStateListOf<DetectedMedia>() }
@@ -188,26 +234,32 @@ fun BrowserScreen(
     fun activateTab(tab: BrowserTab) {
         if (tab.id != activeTabId) captureActiveTabState()
         activeTabId = tab.id
-        addressText = tab.url
+        setAddress(tab.url)
         isBookmarked = tab.isBookmarked
         canGoBack = tab.canGoBack
         detectedMedia.clear()
         showLibrary = false
+        showFindBar = false
         val wv = webViewRef ?: return
+        CookieManager.getInstance().setAcceptCookie(!tab.isIncognito)
+        wv.settings.userAgentString = if (tab.desktopSite) DESKTOP_USER_AGENT else null
         val bundle = tab.webViewBundle
         if (bundle != null) wv.restoreState(bundle) else wv.loadUrl(tab.url)
     }
 
-    fun addTab(url: String = HOME_URL) {
+    fun addTab(url: String = HOME_URL, incognito: Boolean = false) {
         captureActiveTabState()
-        val tab = BrowserTab(url)
+        val tab = BrowserTab(url, isIncognito = incognito)
         tabs.add(tab)
         activeTabId = tab.id
-        addressText = url
+        setAddress(url)
         isBookmarked = false
         canGoBack = false
         detectedMedia.clear()
         showLibrary = false
+        showFindBar = false
+        CookieManager.getInstance().setAcceptCookie(!incognito)
+        webViewRef?.settings?.userAgentString = null
         webViewRef?.loadUrl(url)
     }
 
@@ -219,16 +271,25 @@ fun BrowserScreen(
         val idx = tabs.indexOf(tab)
         val wasActive = tab.id == activeTabId
         tabs.remove(tab)
+        if (tab.isIncognito) {
+            // The single shared WebView has no per-tab cookie jar, so a private tab's promise
+            // to "leave no trace" is honored by wiping cookies/storage the moment it closes
+            // instead of trying to isolate them while it's open.
+            CookieManager.getInstance().removeAllCookies(null)
+            WebStorage.getInstance().deleteAllData()
+        }
         if (wasActive) {
             val next = tabs.getOrElse(idx.coerceAtMost(tabs.size - 1)) { tabs.last() }
             activeTabId = next.id
-            addressText = next.url
+            setAddress(next.url)
             isBookmarked = next.isBookmarked
             canGoBack = next.canGoBack
             detectedMedia.clear()
             val wv = webViewRef
-            val bundle = next.webViewBundle
             if (wv != null) {
+                CookieManager.getInstance().setAcceptCookie(!next.isIncognito)
+                wv.settings.userAgentString = if (next.desktopSite) DESKTOP_USER_AGENT else null
+                val bundle = next.webViewBundle
                 if (bundle != null) wv.restoreState(bundle) else wv.loadUrl(next.url)
             }
         }
@@ -239,8 +300,45 @@ fun BrowserScreen(
         webViewRef?.loadUrl(url)
     }
 
-    // Hardware/gesture back navigates page history first, then leaves the browser.
-    BackHandler(enabled = canGoBack) { webViewRef?.goBack() }
+    fun setDesktopSite(enabled: Boolean) {
+        val tab = activeTab()
+        tab.desktopSite = enabled
+        val wv = webViewRef ?: return
+        wv.settings.userAgentString = if (enabled) DESKTOP_USER_AGENT else null
+        wv.reload()
+    }
+
+    // Handles magnet links and .torrent files: WebView has no native BitTorrent support (nor
+    // does any mainstream mobile browser), so these are handed off to whatever torrent client
+    // the user has installed, the same way a desktop browser would.
+    fun tryOpenTorrentLink(url: String): Boolean {
+        val isMagnet = url.startsWith("magnet:", ignoreCase = true)
+        val isTorrentFile = url.substringBefore('?').endsWith(".torrent", ignoreCase = true)
+        if (!isMagnet && !isTorrentFile) return false
+        return try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            true
+        } catch (e: ActivityNotFoundException) {
+            scope.launch {
+                snackbarHostState.showSnackbar("No torrent app installed to open this link")
+            }
+            true
+        }
+    }
+
+    // Hardware/gesture back closes the find bar, then navigates page history, then leaves the browser.
+    BackHandler(enabled = showFindBar || canGoBack) {
+        when {
+            showFindBar -> {
+                showFindBar = false
+                findQuery = ""
+                findActiveMatch = 0
+                findTotalMatches = 0
+                webViewRef?.clearMatches()
+            }
+            canGoBack -> webViewRef?.goBack()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -255,9 +353,19 @@ fun BrowserScreen(
                 TopAppBar(
                     title = {
                         OutlinedTextField(
-                            value = addressText,
-                            onValueChange = { addressText = it },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            value = addressField,
+                            onValueChange = { addressField = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .onFocusChanged { state ->
+                                    addressFocused = state.isFocused
+                                    if (state.isFocused) {
+                                        addressField = addressField.copy(
+                                            selection = TextRange(0, addressField.text.length),
+                                        )
+                                    }
+                                },
                             singleLine = true,
                             textStyle = MaterialTheme.typography.bodyLarge,
                             placeholder = {
@@ -268,9 +376,20 @@ fun BrowserScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             },
+                            trailingIcon = {
+                                // A tappable "Go" alongside the keyboard's own Go/Enter action -
+                                // not every keyboard makes that action obviously labeled.
+                                IconButton(onClick = {
+                                    focusManager.clearFocus()
+                                    loadUrl(normalizeInput(addressField.text))
+                                }) {
+                                    Icon(Icons.Filled.Search, contentDescription = "Go")
+                                }
+                            },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                             keyboardActions = KeyboardActions(onGo = {
-                                loadUrl(normalizeInput(addressText))
+                                focusManager.clearFocus()
+                                loadUrl(normalizeInput(addressField.text))
                             }),
                         )
                     },
@@ -281,7 +400,7 @@ fun BrowserScreen(
                     },
                     actions = {
                         IconButton(onClick = {
-                            isBookmarked = BrowserStore.toggleBookmark(context, activeTab().url, addressText)
+                            isBookmarked = BrowserStore.toggleBookmark(context, activeTab().url, addressField.text)
                             activeTab().isBookmarked = isBookmarked
                             scope.launch {
                                 snackbarHostState.showSnackbar(if (isBookmarked) "Bookmarked" else "Bookmark removed")
@@ -294,8 +413,83 @@ fun BrowserScreen(
                                 modifier = Modifier.size(26.dp),
                             )
                         }
+                        Box {
+                            IconButton(onClick = { showOverflowMenu = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Find in page") },
+                                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        showFindBar = true
+                                        findQuery = ""
+                                        findActiveMatch = 0
+                                        findTotalMatches = 0
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Desktop site") },
+                                    leadingIcon = { Icon(Icons.Filled.DesktopWindows, contentDescription = null) },
+                                    trailingIcon = {
+                                        if (activeTab().desktopSite) {
+                                            Icon(Icons.Filled.Check, contentDescription = "Enabled")
+                                        }
+                                    },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        setDesktopSite(!activeTab().desktopSite)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("New private tab") },
+                                    leadingIcon = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        addTab(incognito = true)
+                                    },
+                                )
+                            }
+                        }
                     },
                 )
+                if (addressFocused && addressSuggestions.isNotEmpty()) {
+                    AddressSuggestions(
+                        suggestions = addressSuggestions,
+                        onSelect = { link ->
+                            focusManager.clearFocus()
+                            setAddress(link.url)
+                            loadUrl(link.url)
+                        },
+                    )
+                }
+                if (showFindBar) {
+                    FindInPageBar(
+                        query = findQuery,
+                        activeMatch = findActiveMatch,
+                        totalMatches = findTotalMatches,
+                        onQueryChange = { q ->
+                            findQuery = q
+                            if (q.isBlank()) {
+                                webViewRef?.clearMatches()
+                                findActiveMatch = 0
+                                findTotalMatches = 0
+                            } else {
+                                webViewRef?.findAllAsync(q)
+                            }
+                        },
+                        onNext = { webViewRef?.findNext(true) },
+                        onPrevious = { webViewRef?.findNext(false) },
+                        onClose = {
+                            showFindBar = false
+                            findQuery = ""
+                            findActiveMatch = 0
+                            findTotalMatches = 0
+                            webViewRef?.clearMatches()
+                        },
+                    )
+                }
                 if (isLoading) {
                     LinearProgressIndicator(
                         progress = { pageProgress },
@@ -320,6 +514,11 @@ fun BrowserScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            PullToRefreshBox(
+                isRefreshing = isLoading,
+                onRefresh = { webViewRef?.reload() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->
@@ -346,12 +545,19 @@ fun BrowserScreen(
                         CookieManager.getInstance().setAcceptCookie(true)
                         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
 
+                        setFindListener { activeMatchOrdinal, numberOfMatches, isDoneCounting ->
+                            if (isDoneCounting) {
+                                findTotalMatches = numberOfMatches
+                                findActiveMatch = if (numberOfMatches == 0) 0 else activeMatchOrdinal + 1
+                            }
+                        }
+
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                 isLoading = true
                                 showLibrary = false
                                 url?.let {
-                                    addressText = it
+                                    setAddress(it)
                                     val tab = tabs.firstOrNull { t -> t.id == activeTabId }
                                     tab?.url = it
                                     isBookmarked = BrowserStore.isBookmarked(context, it)
@@ -367,7 +573,7 @@ fun BrowserScreen(
                                 canGoBack = view?.canGoBack() == true
                                 val tab = tabs.firstOrNull { t -> t.id == activeTabId }
                                 tab?.canGoBack = canGoBack
-                                if (url != null) {
+                                if (url != null && tab?.isIncognito != true) {
                                     BrowserStore.recordVisit(context, url, view?.title.orEmpty())
                                 }
                                 view?.title?.takeIf { it.isNotBlank() }?.let { tab?.title = it }
@@ -399,7 +605,10 @@ fun BrowserScreen(
                             override fun shouldOverrideUrlLoading(
                                 view: WebView?,
                                 request: WebResourceRequest?,
-                            ): Boolean = false
+                            ): Boolean {
+                                val url = request?.url?.toString() ?: return false
+                                return tryOpenTorrentLink(url)
+                            }
                         }
 
                         webChromeClient = object : WebChromeClient() {
@@ -434,7 +643,11 @@ fun BrowserScreen(
                         }
 
                         // Direct file/media links (and content-disposition responses) land here.
+                        // .torrent downloads specifically take this path rather than
+                        // shouldOverrideUrlLoading, since WebView treats them as a download, not
+                        // a navigation.
                         setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+                            if (tryOpenTorrentLink(url)) return@setDownloadListener
                             val id = DownloadOps.enqueue(context, url, userAgent, contentDisposition, mimeType)
                             scope.launch {
                                 snackbarHostState.showSnackbar(
@@ -462,13 +675,14 @@ fun BrowserScreen(
                     }
                 },
             )
+            }
 
             if (showLibrary) {
                 BrowserLibrary(
                     bookmarks = remember(showLibrary) { BrowserStore.bookmarks(context) },
                     history = remember(showLibrary) { BrowserStore.history(context) },
                     onOpenLink = { url ->
-                        addressText = url
+                        setAddress(url)
                         loadUrl(url)
                     },
                     onClearHistory = { BrowserStore.clearHistory(context) },
@@ -637,14 +851,14 @@ private fun BrowserTabChip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            imageVector = Icons.Filled.Public,
-            contentDescription = null,
+            imageVector = if (tab.isIncognito) Icons.Filled.VisibilityOff else Icons.Filled.Public,
+            contentDescription = if (tab.isIncognito) "Private tab" else null,
             modifier = Modifier.size(18.dp),
             tint = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            text = tab.title.ifBlank { tab.url },
+            text = if (tab.isIncognito) "Private" else tab.title.ifBlank { tab.url },
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
             maxLines = 1,
@@ -659,6 +873,63 @@ private fun BrowserTabChip(
                 modifier = Modifier.size(16.dp),
                 tint = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** History/bookmark matches shown under the address bar while it's focused with non-blank text. */
+@Composable
+private fun AddressSuggestions(suggestions: List<BrowserLink>, onSelect: (BrowserLink) -> Unit) {
+    Surface(tonalElevation = 3.dp, shadowElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
+        Column {
+            suggestions.forEach { link ->
+                StartLinkRow(link = link, leadingIcon = Icons.Filled.History, onClick = { onSelect(link) })
+            }
+        }
+    }
+}
+
+/** In-page text search bar, backed by [WebView.findAllAsync]/[WebView.findNext]. */
+@Composable
+private fun FindInPageBar(
+    query: String,
+    activeMatch: Int,
+    totalMatches: Int,
+    onQueryChange: (String) -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Surface(tonalElevation = 2.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.weight(1f).height(52.dp),
+                singleLine = true,
+                placeholder = { Text("Find in page") },
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            if (totalMatches > 0) {
+                Text(
+                    text = "$activeMatch/$totalMatches",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
+            IconButton(onClick = onPrevious, enabled = totalMatches > 0) {
+                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match")
+            }
+            IconButton(onClick = onNext, enabled = totalMatches > 0) {
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Next match")
+            }
+            IconButton(onClick = onClose) {
+                Icon(Icons.Filled.Close, contentDescription = "Close find bar")
+            }
         }
     }
 }

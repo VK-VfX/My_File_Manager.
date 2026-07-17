@@ -3,6 +3,32 @@
 All notable changes to **WhatFiles?** are documented here. Each version is also
 published as a GitHub Release with the debug and release APKs attached.
 
+## v4.14.0
+
+### Changed — A proper browser, and faster huge folders
+- **Visible "Go" button** in the address bar, next to the keyboard's own Go/Enter action.
+- **Tap-to-select-all** in the address bar (like Chrome) so retyping a URL doesn't require
+  manually clearing it first.
+- **Address bar autocomplete** — suggests matching history and bookmark entries as you type,
+  shown right under the address bar.
+- **Pull-to-refresh** on the page itself, alongside the existing reload button.
+- **"Desktop site" toggle** (via the new overflow menu) for pages that serve broken mobile
+  layouts.
+- **Private tabs** — a new tab that skips history and, since the browser shares a single WebView
+  across tabs, has its cookies and site storage wiped the moment it's closed rather than trying to
+  isolate them while open.
+- **Find in page** — search the current page's text, with match count and next/previous.
+- **Magnet links and `.torrent` downloads** now hand off to an installed torrent app instead of
+  silently doing nothing or erroring, the same way a desktop browser would. (A full embedded
+  BitTorrent client was considered, but its native library's exact current Maven coordinates
+  couldn't be verified from this environment and this project can't run a local Gradle build to
+  catch a bad dependency before it ships - handoff to an existing client is the safe, real choice
+  here.)
+- **Faster folders with thousands of files** — directory listing now streams in batches instead of
+  blocking on stat-ing the entire folder before showing anything, so huge folders (e.g. a camera
+  roll or Downloads with thousands of items) show their first screenful almost immediately instead
+  of sitting on a blank loading state for the whole scan.
+
 ## v4.13.0
 
 ### Changed — Permanent delete, a revamped progress UI, and a real Chromium upgrade

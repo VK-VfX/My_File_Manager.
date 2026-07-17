@@ -62,12 +62,18 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         val path = _uiState.value.path
         recursiveEntries = null
         recursiveJob?.cancel()
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            rawEntries = emptyList()
             _uiState.update { it.copy(isLoading = true) }
-            val loaded = withContext(Dispatchers.IO) { FileOps.listChildren(File(path)) }
-            rawEntries = loaded
+            // Batched instead of one blocking pass over the whole directory - a folder with
+            // thousands of entries now reveals its first screenful immediately and streams in
+            // the rest, instead of sitting on a blank loading state for the entire scan.
+            FileOps.listChildrenBatched(File(path)) { batch ->
+                rawEntries = rawEntries + batch
+                _uiState.update { it.copy(isLoading = false) }
+                recompute()
+            }
             _uiState.update { it.copy(isLoading = false) }
-            recompute()
         }
     }
 
