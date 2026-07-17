@@ -29,6 +29,24 @@ object FileOps {
         return children.mapNotNull { runCatching { FileEntry.from(it) }.getOrNull() }
     }
 
+    /** Same as [listChildren], but calls [onBatch] incrementally as entries are statted instead
+     *  of blocking until the whole directory is read. A folder with thousands of entries can
+     *  then show its first screenful right away instead of a blank loading state for the whole
+     *  scan - folders smaller than [batchSize] behave exactly like [listChildren] (one batch). */
+    fun listChildrenBatched(dir: File, batchSize: Int = 200, onBatch: (List<FileEntry>) -> Unit) {
+        val children = dir.listFiles() ?: return
+        var batch = ArrayList<FileEntry>(batchSize)
+        for (child in children) {
+            val entry = runCatching { FileEntry.from(child) }.getOrNull() ?: continue
+            batch.add(entry)
+            if (batch.size >= batchSize) {
+                onBatch(batch)
+                batch = ArrayList(batchSize)
+            }
+        }
+        if (batch.isNotEmpty()) onBatch(batch)
+    }
+
     /** Every descendant (files and folders) beneath [root], excluding [root] itself. */
     fun scanRecursive(root: File): List<FileEntry> {
         if (!root.isDirectory) return emptyList()

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.data.FileEntry
 import com.vfxsal.filemanager.data.FileIndex
+import com.vfxsal.filemanager.data.MediaStoreIndex
 import com.vfxsal.filemanager.feature.files.browse.SortBy
 import com.vfxsal.filemanager.feature.files.browse.buildFileEntryComparator
 import com.vfxsal.filemanager.feature.files.tags.FileTagsStore
@@ -81,7 +82,11 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
                 viewMode = viewMode,
             )
             rawEntries = withContext(Dispatchers.IO) {
-                FileIndex.allFiles().filter { it.category == category }
+                if (MediaStoreIndex.isSupported(category)) {
+                    MediaStoreIndex.query(getApplication(), category)
+                } else {
+                    FileIndex.allFiles().filter { it.category == category }
+                }
             }
             _uiState.update { it.copy(isLoading = false) }
             recompute()
@@ -122,19 +127,17 @@ class CategoryViewModel(application: Application) : AndroidViewModel(application
         return _uiState.value.entries.filter { selected.contains(it.path) }
     }
 
-    fun deleteSelected(onResult: (Int) -> Unit) {
+    fun deleteSelected(permanent: Boolean, onResult: (Int) -> Unit) {
         val targets = _uiState.value.selectedPaths.map { File(it) }
         val context = getApplication<Application>()
         viewModelScope.launch {
             val deleted = withContext(Dispatchers.IO) {
                 OperationProgressBus.start("Deleting ${targets.size} items", targets.size)
                 try {
-                    var done = 0
-                    targets.count { target ->
-                        val moved = TrashOps.moveToTrash(context, target)
-                        done++
-                        OperationProgressBus.update(done)
-                        moved
+                    if (permanent) {
+                        TrashOps.deletePermanently(context, targets) { done, _ -> OperationProgressBus.update(done) }
+                    } else {
+                        TrashOps.moveMultipleToTrash(context, targets) { done, _ -> OperationProgressBus.update(done) }
                     }
                 } finally {
                     OperationProgressBus.finish()

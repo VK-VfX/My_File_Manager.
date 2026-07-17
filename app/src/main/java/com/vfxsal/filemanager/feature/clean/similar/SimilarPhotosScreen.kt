@@ -163,9 +163,9 @@ fun SimilarPhotosScreen(
         DeleteConfirmationDialog(
             itemCount = uiState.selectedCount,
             totalBytes = uiState.selectedBytes,
-            onConfirm = {
+            onConfirm = { permanent ->
                 showConfirm = false
-                viewModel.deleteSelected()
+                viewModel.deleteSelected(permanent)
             },
             onDismiss = { showConfirm = false },
         )

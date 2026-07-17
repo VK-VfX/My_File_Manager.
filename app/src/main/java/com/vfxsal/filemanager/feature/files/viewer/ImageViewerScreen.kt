@@ -120,12 +120,17 @@ fun ImageViewerScreen(
         DeleteConfirmDialog(
             count = 1,
             onDismiss = { deleteTarget = null },
-            onConfirm = {
+            onConfirm = { permanent ->
                 deleteTarget = null
                 val wasLast = uiState.images.size <= 1
-                viewModel.deleteAndRemove(entry) { success ->
+                viewModel.deleteAndRemove(entry, permanent) { success ->
                     scope.launch {
-                        snackbarHostState.showSnackbar(if (success) "Moved to trash" else "Could not delete")
+                        val message = if (success) {
+                            if (permanent) "Deleted permanently" else "Moved to trash"
+                        } else {
+                            "Could not delete"
+                        }
+                        snackbarHostState.showSnackbar(message)
                     }
                     if (success && wasLast) onBack()
                 }

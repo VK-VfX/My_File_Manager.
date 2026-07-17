@@ -12,8 +12,8 @@ android {
         applicationId = "com.vfxsal.filemanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "4.2.0"
+        versionCode = 26
+        versionName = "4.14.0"
 
         vectorDrawables {
             useSupportLibrary = true
@@ -93,6 +93,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
 
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.webkit)
 
     implementation(libs.kotlinx.coroutines.android)
 
@@ -106,5 +107,10 @@ dependencies {
 
     implementation(libs.accompanist.permissions)
 
+    // Apache Commons Compress (+ XZ for LZMA2) powers 7z read/write; ZIP still uses java.util.zip.
+    implementation(libs.commons.compress)
+    implementation(libs.xz)
+
     testImplementation(libs.junit)
+    testImplementation(libs.json)
 }

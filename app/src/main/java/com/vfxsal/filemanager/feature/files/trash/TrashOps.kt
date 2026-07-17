@@ -34,31 +34,93 @@ object TrashOps {
             File(trashDir(context), "$id-${File(originalPath).name}")
     }
 
-    fun trashDir(context: Context): File = File(context.filesDir, TRASH_DIR_NAME).apply { mkdirs() }
+    // Deliberately NOT context.filesDir: that's always internal storage, a different filesystem
+    // from the shared/external storage nearly every user file lives on, so File.renameTo() would
+    // always fail and silently fall back to a full byte-for-byte copy + delete - turning every
+    // "delete" into reading and rewriting the entire file. getExternalFilesDir() is app-private
+    // but lives on the *same* physical volume as the rest of primary shared storage, so moving a
+    // file here is a genuine instant rename for the common case (a real SD card / secondary
+    // volume is still a different filesystem and still needs a copy - that's an OS-level limit,
+    // not something this app can avoid).
+    fun trashDir(context: Context): File =
+        File(context.getExternalFilesDir(null) ?: context.filesDir, TRASH_DIR_NAME).apply { mkdirs() }
 
     private fun manifestFile(context: Context): File = File(trashDir(context), MANIFEST_NAME)
 
-    fun moveToTrash(context: Context, file: File): Boolean {
-        if (!file.exists()) return false
-        return try {
-            val id = UUID.randomUUID().toString()
-            val originalPath = file.absolutePath
-            val isDirectory = file.isDirectory
-            val sizeBytes = if (isDirectory) FileTreeWalker.recursiveSize(file) else file.length()
-            val dest = File(trashDir(context), "$id-${file.name}")
-            val moved = file.renameTo(dest) || run {
-                file.copyRecursively(dest, overwrite = false)
-                file.deleteRecursively()
+    fun moveToTrash(context: Context, file: File): Boolean = moveMultipleToTrash(context, listOf(file)) == 1
+
+    /** Moves every file in [files] to trash, reading and writing the manifest exactly once for
+     *  the whole batch instead of once per file - the per-file version made multi-select delete
+     *  quadratic in the number of selected items, independent of how big any of them were. */
+    fun moveMultipleToTrash(
+        context: Context,
+        files: List<File>,
+        onProgress: (movedSoFar: Int, total: Int) -> Unit = { _, _ -> },
+    ): Int = synchronized(this) {
+        if (files.isEmpty()) return 0
+        val trashDir = trashDir(context)
+        val newEntries = mutableListOf<TrashEntry>()
+        val removedPaths = mutableListOf<String>()
+
+        for ((index, file) in files.withIndex()) {
+            if (file.exists()) {
+                try {
+                    val id = UUID.randomUUID().toString()
+                    val originalPath = file.absolutePath
+                    val isDirectory = file.isDirectory
+                    val sizeBytes = if (isDirectory) FileTreeWalker.recursiveSize(file) else file.length()
+                    val dest = File(trashDir, "$id-${file.name}")
+                    val moved = file.renameTo(dest) || run {
+                        file.copyRecursively(dest, overwrite = false)
+                        file.deleteRecursively()
+                    }
+                    if (moved) {
+                        newEntries.add(TrashEntry(id, originalPath, System.currentTimeMillis(), isDirectory, sizeBytes))
+                        removedPaths.add(originalPath)
+                    }
+                } catch (e: Exception) {
+                    // Skip this one, keep going with the rest of the batch.
+                }
             }
-            if (moved) {
-                appendManifestEntry(context, TrashEntry(id, originalPath, System.currentTimeMillis(), isDirectory, sizeBytes))
-                FileTagsStore.onPathsRemoved(context, listOf(originalPath))
-                FileIndex.invalidate()
-            }
-            moved
-        } catch (e: Exception) {
-            false
+            onProgress(index + 1, files.size)
         }
+
+        if (newEntries.isNotEmpty()) {
+            writeManifest(context, readManifest(context) + newEntries)
+            FileTagsStore.onPathsRemoved(context, removedPaths)
+            FileIndex.invalidate()
+        }
+        newEntries.size
+    }
+
+    /** Deletes every file in [files] outright, bypassing the recycle bin entirely - for when the
+     *  user explicitly picks "Delete permanently" over the default, recoverable trash move. */
+    fun deletePermanently(
+        context: Context,
+        files: List<File>,
+        onProgress: (deletedSoFar: Int, total: Int) -> Unit = { _, _ -> },
+    ): Int {
+        if (files.isEmpty()) return 0
+        var deletedCount = 0
+        val removedPaths = mutableListOf<String>()
+
+        for ((index, file) in files.withIndex()) {
+            try {
+                if (file.deleteRecursively()) {
+                    deletedCount++
+                    removedPaths.add(file.absolutePath)
+                }
+            } catch (e: Exception) {
+                // Skip this one, keep going with the rest of the batch.
+            }
+            onProgress(index + 1, files.size)
+        }
+
+        if (removedPaths.isNotEmpty()) {
+            FileTagsStore.onPathsRemoved(context, removedPaths)
+            FileIndex.invalidate()
+        }
+        return deletedCount
     }
 
     fun listEntries(context: Context): List<TrashEntry> =
@@ -150,11 +212,6 @@ object TrashOps {
             sb.append(entry.sizeBytes).append('\n')
         }
         manifestFile(context).writeText(sb.toString())
-    }
-
-    @Synchronized
-    private fun appendManifestEntry(context: Context, entry: TrashEntry) {
-        writeManifest(context, readManifest(context) + entry)
     }
 
     @Synchronized

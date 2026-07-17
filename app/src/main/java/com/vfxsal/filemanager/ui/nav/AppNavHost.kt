@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -43,6 +44,7 @@ import com.vfxsal.filemanager.feature.clean.cleanNavGraph
 import com.vfxsal.filemanager.feature.files.filesNavGraph
 import com.vfxsal.filemanager.feature.music.musicNavGraph
 import com.vfxsal.filemanager.feature.settings.SettingsViewModel
+import com.vfxsal.filemanager.feature.tools.toolsNavGraph
 import com.vfxsal.filemanager.feature.video.videoNavGraph
 import com.vfxsal.filemanager.feature.wallpaper.wallpapersNavGraph
 import com.vfxsal.filemanager.ui.components.OperationProgressOverlay
@@ -73,7 +75,7 @@ private val AppPopExitTransition: AnimatedContentTransitionScope<NavBackStackEnt
 
 /**
  * Hosts every feature's nested nav graph and draws the bottom navigation bar.
- * The bar is only shown while the current destination is one of the five
+ * The bar is only shown while the current destination is one of the
  * top-level graph routes; drilling into a detail screen (file details, video
  * player, now playing, wallpaper preview, ...) hides it automatically because
  * those routes live under a different route string within each feature graph.
@@ -107,7 +109,19 @@ fun AppRoot(settingsViewModel: SettingsViewModel) {
                                 }
                             },
                             icon = { NavTabIcon(destination = destination, selected = selected) },
-                            label = { Text(stringResource(destination.labelRes)) },
+                            label = {
+                                // With six destinations, item cells are narrow. Force a single
+                                // line so a long label ("Wallpapers") never wraps to two rows on
+                                // devices with wider default fonts (Pixel) - it stays streamlined
+                                // like it already looked on One UI.
+                                Text(
+                                    text = stringResource(destination.labelRes),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
                         )
                     }
                 }
@@ -128,6 +142,7 @@ fun AppRoot(settingsViewModel: SettingsViewModel) {
             videoNavGraph(navController)
             musicNavGraph(navController)
             wallpapersNavGraph(navController)
+            toolsNavGraph(navController)
         }
     }
 

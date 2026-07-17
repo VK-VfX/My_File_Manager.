@@ -152,10 +152,16 @@ fun FileActionsHost(
         DeleteConfirmDialog(
             count = 1,
             onDismiss = { state.dismissDelete() },
-            onConfirm = {
+            onConfirm = { permanent ->
                 state.dismissDelete()
                 scope.launch {
-                    withContext(Dispatchers.IO) { TrashOps.moveToTrash(context, entry.file) }
+                    withContext(Dispatchers.IO) {
+                        if (permanent) {
+                            TrashOps.deletePermanently(context, listOf(entry.file))
+                        } else {
+                            TrashOps.moveToTrash(context, entry.file)
+                        }
+                    }
                     onChanged()
                 }
             },

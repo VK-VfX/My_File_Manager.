@@ -8,11 +8,15 @@ import androidx.core.content.getSystemService
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
+import com.vfxsal.filemanager.data.FileIndex
 
 class FileManagerApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         createPlaybackNotificationChannel()
+        // Warm the storage index in the background so the first screen reads a ready snapshot
+        // instead of blocking on a cold walk.
+        FileIndex.prime()
     }
 
     /**

@@ -62,12 +62,18 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         val path = _uiState.value.path
         recursiveEntries = null
         recursiveJob?.cancel()
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
+            rawEntries = emptyList()
             _uiState.update { it.copy(isLoading = true) }
-            val loaded = withContext(Dispatchers.IO) { FileOps.listChildren(File(path)) }
-            rawEntries = loaded
+            // Batched instead of one blocking pass over the whole directory - a folder with
+            // thousands of entries now reveals its first screenful immediately and streams in
+            // the rest, instead of sitting on a blank loading state for the entire scan.
+            FileOps.listChildrenBatched(File(path)) { batch ->
+                rawEntries = rawEntries + batch
+                _uiState.update { it.copy(isLoading = false) }
+                recompute()
+            }
             _uiState.update { it.copy(isLoading = false) }
-            recompute()
         }
     }
 
@@ -184,19 +190,17 @@ class DirectoryBrowserViewModel(application: Application) : AndroidViewModel(app
         }
     }
 
-    fun deleteSelected(onResult: (Int) -> Unit) {
+    fun deleteSelected(permanent: Boolean, onResult: (Int) -> Unit) {
         val targets = _uiState.value.selectedPaths.map { File(it) }
         val context = getApplication<Application>()
         viewModelScope.launch {
             val deleted = withContext(Dispatchers.IO) {
                 OperationProgressBus.start("Deleting ${targets.size} items", targets.size)
                 try {
-                    var done = 0
-                    targets.count { target ->
-                        val moved = TrashOps.moveToTrash(context, target)
-                        done++
-                        OperationProgressBus.update(done)
-                        moved
+                    if (permanent) {
+                        TrashOps.deletePermanently(context, targets) { done, _ -> OperationProgressBus.update(done) }
+                    } else {
+                        TrashOps.moveMultipleToTrash(context, targets) { done, _ -> OperationProgressBus.update(done) }
                     }
                 } finally {
                     OperationProgressBus.finish()

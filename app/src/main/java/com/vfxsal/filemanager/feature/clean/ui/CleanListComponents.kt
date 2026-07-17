@@ -77,11 +77,14 @@ fun CleanBottomBar(
     }
 }
 
+/** [onConfirm] receives whether the user chose permanent deletion - this previously always said
+ *  "permanently delete... cannot be undone" while actually moving files to the recycle bin, which
+ *  was simply untrue and left no way to actually delete something outright. */
 @Composable
 fun DeleteConfirmationDialog(
     itemCount: Int,
     totalBytes: Long,
-    onConfirm: () -> Unit,
+    onConfirm: (permanent: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -89,15 +92,19 @@ fun DeleteConfirmationDialog(
         icon = { Icon(Icons.Filled.Warning, contentDescription = null) },
         title = { Text("Delete $itemCount item${if (itemCount == 1) "" else "s"}?") },
         text = {
-            Text(
-                "This will permanently delete ${FormatUtils.formatFileSize(totalBytes)} from your device. " +
-                    "This action cannot be undone.",
-            )
+            Column {
+                Text(
+                    "${FormatUtils.formatFileSize(totalBytes)} will be removed. Moved items stay in " +
+                        "the Recycle Bin and can be restored later.",
+                )
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { onConfirm(true) }, modifier = Modifier.align(Alignment.End)) {
+                    Text("Delete permanently instead", color = MaterialTheme.colorScheme.error)
+                }
+            }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
-            }
+            TextButton(onClick = { onConfirm(false) }) { Text("Move to Recycle Bin") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

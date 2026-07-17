@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -91,14 +92,25 @@ fun TextInputDialog(
     )
 }
 
+/** [onConfirm] receives whether the user chose permanent deletion - the dialog previously always
+ *  said "This action cannot be undone" while actually moving the file to the recycle bin, which
+ *  was simply untrue and left no way to actually delete something outright. */
 @Composable
-fun DeleteConfirmDialog(count: Int, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun DeleteConfirmDialog(count: Int, onDismiss: () -> Unit, onConfirm: (permanent: Boolean) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (count == 1) "Delete this item?" else "Delete $count items?") },
-        text = { Text("This action cannot be undone.") },
+        text = {
+            Column {
+                Text("Moved items stay in the Recycle Bin and can be restored later.")
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { onConfirm(true) }, modifier = Modifier.align(Alignment.End)) {
+                    Text("Delete permanently instead", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = { onConfirm(false) }) { Text("Move to Recycle Bin") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }

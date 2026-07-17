@@ -25,11 +25,13 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.PhotoSizeSelectLarge
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -79,11 +81,17 @@ fun CleanDashboardScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
+        // The dashboard's ViewModel lives for as long as this destination stays on the back
+        // stack, so navigating to Junk/Large/Duplicates/Similar Photos, deleting something, and
+        // pressing back does NOT recreate it - without a resume-triggered refresh it just kept
+        // showing the totals from before the delete, which read as the numbers "not tallying."
+        var isFirstResume = true
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 val nowHasAccess = PermissionUtils.hasAllFilesAccess(context)
-                if (nowHasAccess && !hasAccess) viewModel.refresh()
+                if (nowHasAccess && (!hasAccess || !isFirstResume)) viewModel.refresh()
                 hasAccess = nowHasAccess
+                isFirstResume = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -108,6 +116,7 @@ fun CleanDashboardScreen(
     ) {
         DashboardContent(
             uiState = uiState,
+            onRefresh = viewModel::refresh,
             onNavigateJunk = onNavigateJunk,
             onNavigateLarge = onNavigateLarge,
             onNavigateDuplicates = onNavigateDuplicates,
@@ -119,6 +128,7 @@ fun CleanDashboardScreen(
 @Composable
 private fun DashboardContent(
     uiState: CleanDashboardUiState,
+    onRefresh: () -> Unit,
     onNavigateJunk: () -> Unit,
     onNavigateLarge: () -> Unit,
     onNavigateDuplicates: () -> Unit,
@@ -129,7 +139,7 @@ private fun DashboardContent(
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { CleanHealthHeader(uiState) }
+        item { CleanHealthHeader(uiState, onRefresh = onRefresh) }
         item { StorageOverviewCard(uiState) }
         item { ReclaimableCard(uiState, modifier = Modifier.padding(horizontal = 16.dp)) }
         item {
@@ -199,11 +209,18 @@ private fun DashboardContent(
     }
 }
 
-/** Big title plus a one-line storage health verdict, colored by how full the device is. */
+/** Big title plus a one-line storage health verdict, colored by how full the device is. Also
+ *  carries the refresh action - pull-to-refresh works but isn't discoverable as the only way to
+ *  re-scan, especially on a screen with no top app bar of its own. */
 @Composable
-private fun CleanHealthHeader(uiState: CleanDashboardUiState) {
+private fun CleanHealthHeader(uiState: CleanDashboardUiState, onRefresh: () -> Unit) {
     Column(Modifier.padding(horizontal = 20.dp)) {
-        Text("Clean", style = MaterialTheme.typography.headlineMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Clean", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+            IconButton(onClick = onRefresh, enabled = !uiState.isScanning) {
+                Icon(Icons.Filled.Refresh, contentDescription = "Rescan storage")
+            }
+        }
         val stats = uiState.storageStats
         if (stats != null) {
             val freeFraction = 1f - stats.usedFraction
@@ -375,7 +392,12 @@ private fun CategoryDonutChart(categoryTotals: Map<FileCategory, Long>, modifier
     val categoryColors = FileCategory.entries.associateWith { it.color() }
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val total = categoryTotals.values.sum().coerceAtLeast(1L)
-    val entries = categoryTotals.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    // Keyed on categoryTotals itself (not recomputed on every recomposition) - Map isn't a type
+    // Compose can prove stable, so without this the filter+sort re-runs on any recomposition of
+    // this composable, not just when the underlying totals actually change.
+    val entries = remember(categoryTotals) {
+        categoryTotals.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    }
 
     Canvas(modifier = modifier.semantics { contentDescription = "Storage usage by file category" }) {
         val strokeWidth = size.minDimension * 0.2f
@@ -415,7 +437,9 @@ private fun CategoryDonutChart(categoryTotals: Map<FileCategory, Long>, modifier
 @Composable
 private fun CategoryLegend(categoryTotals: Map<FileCategory, Long>) {
     val total = categoryTotals.values.sum().coerceAtLeast(1L)
-    val entries = categoryTotals.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    val entries = remember(categoryTotals) {
+        categoryTotals.entries.filter { it.value > 0 }.sortedByDescending { it.value }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         entries.forEach { (category, bytes) ->

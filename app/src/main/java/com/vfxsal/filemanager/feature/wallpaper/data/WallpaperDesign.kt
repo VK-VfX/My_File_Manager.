@@ -7,6 +7,9 @@ enum class WallpaperStyle {
     CONSTELLATION, HEXAGON_RINGS, SPIRAL, RIPPLE_RINGS, SPLIT_GRADIENT,
     ORBIT_RINGS, MOUNTAIN_SKYLINE, CROSSHAIR_BURST,
     NEBULA_CLOUD, STARFIELD_DRIFT, CIRCUIT_LINES, DIAGONAL_STRIPES, HONEYCOMB, METEOR_SHOWER,
+    // Alan Wake 2 inspired: a lone flashlight beam, misty pine forest, wet-street neon
+    // signage, and the Dark Place's red descent spiral.
+    LIGHT_BEAM, PINE_FOREST, NEON_SIGN, DARK_VORTEX,
 }
 
 /** A procedural wallpaper recipe - [WallpaperRenderer] turns this into a true-black bitmap at any resolution. */

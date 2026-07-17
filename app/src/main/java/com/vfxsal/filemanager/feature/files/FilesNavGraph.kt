@@ -10,6 +10,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.vfxsal.filemanager.data.FileCategory
 import com.vfxsal.filemanager.feature.apps.InstalledAppsScreen
+import com.vfxsal.filemanager.feature.browser.BrowserScreen
+import com.vfxsal.filemanager.feature.browser.DownloadsScreen
 import com.vfxsal.filemanager.feature.files.about.AboutScreen
 import com.vfxsal.filemanager.feature.files.browse.DirectoryBrowserScreen
 import com.vfxsal.filemanager.feature.files.browse.SortBy
@@ -41,6 +43,8 @@ private const val SETTINGS_ROUTE = "files/settings"
 private const val INSTALLED_APPS_ROUTE = "files/apps"
 private const val VAULT_ROUTE = "files/vault"
 private const val TIMELINE_ROUTE = "files/timeline"
+private const val WEB_BROWSER_ROUTE = "files/webbrowser"
+private const val WEB_DOWNLOADS_ROUTE = "files/webdownloads"
 
 private fun viewerRoute(path: String, source: String, sortBy: SortBy, ascending: Boolean): String =
     "files/viewer/${encodePath(path)}?source=$source&sortBy=${sortBy.name}&ascending=$ascending"
@@ -66,8 +70,20 @@ fun NavGraphBuilder.filesNavGraph(navController: NavHostController, settingsView
                 onOpenSettings = { navController.navigate(SETTINGS_ROUTE) },
                 onOpenVault = { navController.navigate(VAULT_ROUTE) },
                 onOpenTimeline = { navController.navigate(TIMELINE_ROUTE) },
+                onOpenBrowser = { navController.navigate(WEB_BROWSER_ROUTE) },
             )
         }
+    }
+
+    composable(WEB_BROWSER_ROUTE) {
+        BrowserScreen(
+            onBack = { navController.popBackStack() },
+            onOpenDownloads = { navController.navigate(WEB_DOWNLOADS_ROUTE) },
+        )
+    }
+
+    composable(WEB_DOWNLOADS_ROUTE) {
+        DownloadsScreen(onBack = { navController.popBackStack() })
     }
 
     composable(VAULT_ROUTE) {

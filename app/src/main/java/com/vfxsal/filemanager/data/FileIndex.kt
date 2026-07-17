@@ -1,6 +1,11 @@
 package com.vfxsal.filemanager.data
 
 import android.os.Environment
+import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -10,19 +15,21 @@ import kotlinx.coroutines.sync.withLock
  * re-walked the entire storage tree on every visit - seconds of repeated I/O on devices
  * with large libraries. Now they all read one cached scan.
  *
- * The cache lives for [TTL_MILLIS] and is dropped explicitly (via [invalidate]) whenever
- * the app itself mutates storage - delete, rename, move, paste, vault, new folder - so
- * screens refresh immediately after the user changes something, while repeated visits
- * within the window are instant. Changes made by *other* apps are picked up when the TTL
- * lapses.
+ * Reads are stale-while-revalidate: once a snapshot exists, callers get it back instantly
+ * even past its TTL, and an expired snapshot just kicks off one background rescan - so
+ * screens never block on a walk after the first one in the process's lifetime. The cache
+ * is dropped explicitly (via [invalidate]) whenever the app itself mutates storage, so
+ * screens refresh immediately after the user changes something; changes made by *other*
+ * apps are picked up by the TTL-triggered background rescan.
  *
- * [allEntries] blocks on a full scan when the cache is cold; call it from Dispatchers.IO.
+ * [allEntries] only blocks (on Dispatchers.IO) when the cache is completely cold.
  */
 object FileIndex {
 
-    private const val TTL_MILLIS = 60_000L
+    private const val TTL_MILLIS = 5 * 60_000L
 
     private val mutex = Mutex()
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile
     private var cached: List<FileEntry>? = null
@@ -30,17 +37,28 @@ object FileIndex {
     @Volatile
     private var scannedAtMillis = 0L
 
+    @Volatile
+    private var refreshing = false
+
     /** Every file and directory under external storage (excluding the root itself). */
-    suspend fun allEntries(forceRefresh: Boolean = false): List<FileEntry> = mutex.withLock {
+    suspend fun allEntries(forceRefresh: Boolean = false): List<FileEntry> {
         val existing = cached
-        val isFresh = System.currentTimeMillis() - scannedAtMillis < TTL_MILLIS
-        if (existing != null && isFresh && !forceRefresh) {
-            existing
-        } else {
-            val scanned = scan()
-            cached = scanned
-            scannedAtMillis = System.currentTimeMillis()
-            scanned
+        if (existing != null && !forceRefresh) {
+            if (System.currentTimeMillis() - scannedAtMillis >= TTL_MILLIS) {
+                triggerBackgroundRefresh()
+            }
+            return existing
+        }
+        return mutex.withLock {
+            val current = cached
+            if (current != null && !forceRefresh) {
+                current
+            } else {
+                val scanned = scan()
+                cached = scanned
+                scannedAtMillis = System.currentTimeMillis()
+                scanned
+            }
         }
     }
 
@@ -53,11 +71,46 @@ object FileIndex {
         cached = null
     }
 
+    /**
+     * Warms the cache in the background (call once at app startup) so the first screen that
+     * needs the index reads a ready snapshot instead of blocking on a cold walk.
+     */
+    fun prime() {
+        if (cached != null || refreshing) return
+        refreshScope.launch { runCatching { allEntries() } }
+    }
+
+    private fun triggerBackgroundRefresh() {
+        if (refreshing) return
+        refreshing = true
+        refreshScope.launch {
+            try {
+                val scanned = scan()
+                cached = scanned
+                scannedAtMillis = System.currentTimeMillis()
+            } finally {
+                refreshing = false
+            }
+        }
+    }
+
     private fun scan(): List<FileEntry> {
         val root = Environment.getExternalStorageDirectory()
         return root.walkTopDown()
+            // Don't descend into large, mostly-inaccessible or noise trees. Under scoped
+            // storage Android/data and Android/obb are huge and unreadable (walking them is
+            // slow and yields nothing), and thumbnail caches are just churn - pruning these
+            // at the directory level (so their whole subtree is skipped) is the single biggest
+            // scan speedup on real devices.
+            .onEnter { dir -> !shouldSkipDir(dir) }
             .filter { it != root }
             .mapNotNull { runCatching { FileEntry.from(it) }.getOrNull() }
             .toList()
+    }
+
+    private fun shouldSkipDir(dir: File): Boolean {
+        val name = dir.name
+        if (name == ".thumbnails" || name == ".trashed") return true
+        return dir.parentFile?.name == "Android" && (name == "data" || name == "obb")
     }
 }

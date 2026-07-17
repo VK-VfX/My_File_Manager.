@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
@@ -58,6 +59,7 @@ import com.vfxsal.filemanager.feature.files.components.rememberFileActionsState
 import com.vfxsal.filemanager.feature.files.util.FileOps
 import com.vfxsal.filemanager.feature.update.UpdateViewModel
 import com.vfxsal.filemanager.util.FormatUtils
+import com.vfxsal.filemanager.ui.components.ShimmerFileList
 import com.vfxsal.filemanager.ui.components.ShimmerHomeContent
 import com.vfxsal.filemanager.util.StorageStats
 import com.vfxsal.filemanager.util.rememberMediaThumbnailLoader
@@ -79,6 +81,7 @@ fun FilesHomeScreen(
     onOpenSettings: () -> Unit,
     onOpenVault: () -> Unit,
     onOpenTimeline: () -> Unit,
+    onOpenBrowser: () -> Unit,
     viewModel: FilesHomeViewModel = viewModel(),
     updateViewModel: UpdateViewModel = viewModel(),
 ) {
@@ -157,15 +160,21 @@ fun FilesHomeScreen(
                         Column {
                             Text("Categories", style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.height(12.dp))
-                            CategoryGrid(
-                                summaries = uiState.categorySummaries,
-                                downloadsCount = uiState.downloadsCount,
-                                downloadsBytes = uiState.downloadsBytes,
-                                onCategoryClick = onOpenCategory,
-                                onDownloadsClick = {
-                                    onOpenDirectory(File(Environment.getExternalStorageDirectory(), "Download").absolutePath)
-                                },
-                            )
+                            if (uiState.isLoading && uiState.categorySummaries.isEmpty()) {
+                                // First scan of the process is still running - show
+                                // placeholders instead of a wall of misleading "Empty" cards.
+                                ShimmerFileList(rowCount = 4)
+                            } else {
+                                CategoryGrid(
+                                    summaries = uiState.categorySummaries,
+                                    downloadsCount = uiState.downloadsCount,
+                                    downloadsBytes = uiState.downloadsBytes,
+                                    onCategoryClick = onOpenCategory,
+                                    onDownloadsClick = {
+                                        onOpenDirectory(File(Environment.getExternalStorageDirectory(), "Download").absolutePath)
+                                    },
+                                )
+                            }
                         }
                     }
 
@@ -173,6 +182,10 @@ fun FilesHomeScreen(
                         InternalStorageRow(
                             onClick = { onOpenDirectory(Environment.getExternalStorageDirectory().absolutePath) },
                         )
+                    }
+
+                    item {
+                        BrowserRow(onClick = onOpenBrowser)
                     }
 
                     if (uiState.recentFiles.isNotEmpty()) {
@@ -599,6 +612,29 @@ private fun InternalStorageRow(onClick: () -> Unit) {
                 Text("Internal Storage", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     text = "Browse all files",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun BrowserRow(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Web Browser", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = "Browse the web and download media and files",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
